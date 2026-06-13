@@ -17,22 +17,25 @@ class ICalSubscriptionService
     }
 
     /**
-     * Fetch events from all configured iCal/Webcal URLs.
+     * Fetch events from all configured iCal/Webcal URLs, or a specific one.
      */
-    public function getEvents(): array
+    public function getEvents(?string $specificUrl = null): array
     {
         $allEvents = [];
+        $urlsToFetch = $specificUrl ? [$specificUrl] : $this->urls;
 
-        foreach ($this->urls as $url) {
+        foreach ($urlsToFetch as $url) {
             $url = trim($url);
             // Convert webcal:// to https://
             $url = str_replace('webcal://', 'https://', $url);
 
             try {
-                $response = Http::get($url);
+                $response = Http::withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+                ])->get($url);
 
                 if ($response->failed()) {
-                    Log::error("Failed to fetch iCal feed from: {$url}");
+                    Log::error("Failed to fetch iCal feed from: {$url}. Status: " . $response->status());
 
                     continue;
                 }
@@ -40,13 +43,16 @@ class ICalSubscriptionService
                 $vcal = VObject\Reader::read($response->body());
 
                 foreach ($vcal->VEVENT as $vevent) {
+                    $isAllDay = !isset($vevent->DTSTART['VALUE']) || (string)$vevent->DTSTART['VALUE'] === 'DATE';
+                    $start = $vevent->DTSTART->getDateTime();
+                    $end = isset($vevent->DTEND) ? $vevent->DTEND->getDateTime() : (clone $start)->modify('+1 hour');
+
                     $allEvents[] = [
                         'id' => (string) ($vevent->UID ?? uniqid()),
                         'title' => (string) $vevent->SUMMARY,
-                        'start' => $vevent->DTSTART->getDateTime()->format(\DateTime::ISO8601),
-                        'end' => isset($vevent->DTEND)
-                            ? $vevent->DTEND->getDateTime()->format(\DateTime::ISO8601)
-                            : $vevent->DTSTART->getDateTime()->modify('+1 hour')->format(\DateTime::ISO8601),
+                        'start' => $isAllDay ? $start->format('Y-m-d') : $start->format(\DateTime::ISO8601),
+                        'end' => $isAllDay ? $end->format('Y-m-d') : $end->format(\DateTime::ISO8601),
+                        'all_day' => $isAllDay,
                         'provider' => 'ical',
                         'feed_url' => $url,
                     ];

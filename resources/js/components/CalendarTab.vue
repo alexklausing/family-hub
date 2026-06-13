@@ -24,6 +24,8 @@ const props = defineProps({
     },
 })
 
+const emit = defineEmits(['range-changed'])
+
 // Modal State
 const isModalOpen = ref(false)
 const modalMode = ref('create') // 'create' or 'edit'
@@ -45,12 +47,22 @@ const calendarOptions = computed(() => ({
             duration: { weeks: 2 },
             buttonText: '2 Weeks',
         },
+        dayGridMonth: {
+            buttonText: 'Month',
+            dayMaxEvents: false,
+        },
+        dayGridDay: {
+            buttonText: 'Day',
+            dayMaxEvents: false,
+        },
         timeGridWeek: {
+            dayMaxEvents: false,
             scrollTime: new Date().getHours() + ':00:00', // Center on current hour
             slotMinTime: '06:00:00', // Hide early morning
             slotMaxTime: '23:00:00', // Hide late night
         },
         timeGridDay: {
+            dayMaxEvents: false,
             scrollTime: new Date().getHours() + ':00:00',
             slotMinTime: '06:00:00',
             slotMaxTime: '23:00:00',
@@ -59,11 +71,24 @@ const calendarOptions = computed(() => ({
     headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'twoWeekView,timeGridWeek,timeGridDay',
+        right: 'dayGridMonth,twoWeekView,timeGridWeek,timeGridDay',
     },
-    events: props.events,
+    events: props.events.map(event => ({
+        id: event.id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        allDay: event.all_day,
+        backgroundColor: event.calendar?.color || '#3b82f6',
+        borderColor: event.calendar?.color || '#3b82f6',
+        extendedProps: {
+            provider: event.calendar?.provider,
+            calendarName: event.calendar?.name
+        }
+    })),
 
     // Touch / Interaction Settings
+    dayMaxEvents: false,
     selectable: true,
     selectMirror: true,
     editable: false, // Disables drag-and-drop & resizing as requested
@@ -71,6 +96,9 @@ const calendarOptions = computed(() => ({
     // Callbacks
     select: handleDateSelect,
     eventClick: handleEventClick,
+    datesSet: (info) => {
+        emit('range-changed', { start: info.startStr, end: info.endStr })
+    }
 }))
 
 function handleDateSelect(selectInfo) {

@@ -1,31 +1,49 @@
 services:
-    laravel.test:
+    app:
         build:
             context: .
             dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'family-hub-app'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        ports:
-            - '${APP_PORT:-80}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        user: sail
+        working_dir: /var/www/html
         volumes:
             - '.:/var/www/html'
         networks:
             - sail
         depends_on:
+            - db
+            - selenium
             - redis
             - meilisearch
-            - mailpit
-            - selenium
+        environment:
+            XDG_CONFIG_HOME: /tmp
+            APP_KEY: '${APP_KEY}'
+            APP_ENV: '${APP_ENV:-local}'
+
+    web:
+        image: 'nginx:alpine'
+        volumes:
+            - '.:/var/www/html'
+            - './docker/nginx.conf:/etc/nginx/conf.d/default.conf'
+        ports:
+            - '${APP_PORT:-8000}:80'
+        depends_on:
+            - app
+        networks:
+            - sail
+
+    db:
+        image: 'postgres:16'
+        environment:
+            POSTGRES_DB: '${DB_DATABASE:-family_hub}'
+            POSTGRES_USER: '${DB_USERNAME:-sail}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-password}'
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        volumes:
+            - 'sail-postgres:/var/lib/postgresql/data'
+        networks:
+            - sail
+
     redis:
         image: 'redis:alpine'
         ports:
@@ -41,6 +59,7 @@ services:
                 - ping
             retries: 3
             timeout: 5s
+
     meilisearch:
         image: 'getmeili/meilisearch:latest'
         ports:
@@ -60,6 +79,7 @@ services:
                 - 'http://127.0.0.1:7700/health'
             retries: 3
             timeout: 5s
+
     mailpit:
         image: 'axllent/mailpit:latest'
         ports:
@@ -67,19 +87,26 @@ services:
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
         networks:
             - sail
+
     selenium:
-        image: 'seleniarm/standalone-chromium'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        volumes:
-            - '/dev/shm:/dev/shm'
+        image: 'seleniarm/standalone-chromium:latest'
+        stdin_open: true
+        tty: true
+        ports:
+            - '${FORWARD_SELENIUM_PORT:-4444}:4444'
+            - '${FORWARD_SELENIUM_VNC_PORT:-7900}:7900'
+        shm_size: 2gb
         networks:
             - sail
+
 networks:
     sail:
         driver: bridge
+
 volumes:
     sail-redis:
         driver: local
     sail-meilisearch:
+        driver: local
+    sail-postgres:
         driver: local

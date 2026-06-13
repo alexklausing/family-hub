@@ -1,19 +1,15 @@
-import { defineConfig } from 'vite'
-import laravel from 'laravel-vite-plugin'
-import { bunny } from 'laravel-vite-plugin/fonts'
-import tailwindcss from '@tailwindcss/vite'
-import vue from '@vitejs/plugin-vue'
-import path from 'path'
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import vue from '@vitejs/plugin-vue';
+import path from 'path';
 
 export default defineConfig({
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
-            refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
+            refresh: [
+                'resources/views/**',
+                'routes/**',
             ],
         }),
         vue({
@@ -24,20 +20,30 @@ export default defineConfig({
                 },
             },
         }),
-        tailwindcss(),
     ],
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './resources/js'),
+            '@': path.resolve(__dirname, 'resources/js'),
         },
     },
     server: {
-        host: '0.0.0.0',
-        hmr: {
-            host: 'localhost',
+        host: '127.0.0.1',
+        port: 5173,
+        strictPort: true,
+        cors: true,
+        https: false,
+        hmr: { host: '127.0.0.1' },
+        fs: {
+            allow: ['..'],
         },
         watch: {
-            ignored: ['**/storage/framework/views/**'],
+            usePolling: false,
+            ignored: [
+                '**/node_modules/**',
+                '**/storage/**',
+                '**/public/build/**',
+                '**/.git/**',
+            ],
         },
-    },
-})
+    }
+});

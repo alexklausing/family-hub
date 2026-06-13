@@ -1,38 +1,39 @@
 # Family Hub Management
-# Adapted from Camp-Curated Doctrine
 
 SAIL=./vendor/bin/sail
-APP_SERVICE=laravel.test
-
-# Use standard Docker Compose without forcing a specific context that might break
-SAIL_CMD=docker compose exec $(APP_SERVICE)
+APP_SERVICE=app
+SAIL_CMD=APP_SERVICE=$(APP_SERVICE) $(SAIL)
 
 # --- Main Commands ---
 
 # Build and start the environment (Fresh Install)
 buildFresh: down
 	@echo "🚀 Building Docker images..."
-	$(SAIL) build --no-cache
+	$(SAIL_CMD) build --no-cache
 	@echo "🔥 Starting Containers..."
-	$(SAIL) up -d
+	$(SAIL_CMD) up -d
 	@echo "Waiting for environment to initialize..."
 	@sleep 10
 	@echo "📦 Installing Local Dependencies (Composer & Node)..."
 	$(SAIL_CMD) composer install
-	$(SAIL_CMD) npm install
+	npm install
 	@echo "🌱 Migrating..."
-	$(SAIL_CMD) php artisan migrate:fresh
+	$(SAIL_CMD) artisan migrate
 	@echo "✅ Setup Complete! Run 'make vite' to start the frontend."
 
 # Start containers
 up:
-	$(SAIL) up -d
+	$(SAIL_CMD) up -d
 
 # Stop and remove containers
 down:
 	$(SAIL) stop
 
 # --- Development Helpers ---
+
+# Run Migrations
+migrate:
+	$(SAIL_CMD) artisan migrate
 
 # Run Vite (direct via local npm)
 vite:
@@ -43,31 +44,31 @@ vite:
 
 # Access PHP container shell
 ssh:
-	$(SAIL_CMD) bash
+	$(SAIL_CMD) shell
 
 # --- Testing & QA ---
 
 # Run all tests (PHP & JS)
 test:
 	@echo "🧪 Running Pest (PHP)..."
-	$(SAIL_CMD) php ./vendor/bin/pest
+	$(SAIL_CMD) pest
 	@echo "🧪 Running Vitest (JS)..."
 	npm run test
 
 # Run Static Analysis (PHPStan)
 stan:
 	@echo "🧐 Running PHPStan..."
-	$(SAIL_CMD) php ./vendor/bin/phpstan analyse
+	$(SAIL_CMD) phpstan analyse
 
 # Run Linting (Pint)
 lint:
 	@echo "🧹 Running Pint (PHP Lint)..."
-	$(SAIL_CMD) php ./vendor/bin/pint --test
+	$(SAIL_CMD) pint --test
 
 # Run Formatting (Pint & Prettier)
 format:
 	@echo "🎨 Formatting PHP (Pint)..."
-	$(SAIL_CMD) php ./vendor/bin/pint
+	$(SAIL_CMD) pint
 	@echo "🎨 Formatting JS/Vue (Prettier)..."
 	npx prettier --write .
 
@@ -85,28 +86,41 @@ check: test stan lint fallow
 # Run Artisan commands
 # Usage: make art c="migrate"
 art:
-	$(SAIL_CMD) php artisan $(c)
+	$(SAIL_CMD) artisan $(c)
 
 # Clear all caches
 refresh:
-	$(SAIL_CMD) php artisan optimize:clear
-	$(SAIL_CMD) php artisan config:clear
-	$(SAIL_CMD) php artisan view:clear
-	$(SAIL_CMD) php artisan route:clear
-	$(SAIL_CMD) php artisan cache:clear
+	$(SAIL_CMD) artisan optimize:clear
+	$(SAIL_CMD) artisan config:clear
+	$(SAIL_CMD) artisan view:clear
+	$(SAIL_CMD) artisan route:clear
+	$(SAIL_CMD) artisan cache:clear
 
 # Hard reset (Caches + Database)
 reset:
-	$(SAIL_CMD) bash -c "php artisan optimize:clear && php artisan migrate:fresh"
+	$(SAIL_CMD) artisan optimize:clear
+	$(SAIL_CMD) artisan migrate:fresh
 	> storage/logs/laravel.log
 	@echo "✅ Reset complete."
 
 # Access Tinker
 tinker:
-	$(SAIL_CMD) php artisan tinker
+	$(SAIL_CMD) artisan tinker
 
 # Tail logs
 log:
 	$(SAIL_CMD) tail -f storage/logs/laravel.log
 
-.PHONY: buildFresh up down vite ssh test art refresh reset tinker log
+# Diagnose Docker/Environment issues
+diagnose:
+	@echo "🐳 Checking Docker status..."
+	@docker info > /dev/null 2>&1 || (echo "❌ Docker daemon is not responding. Please restart Docker Desktop." && exit 1)
+	@echo "✅ Docker daemon is responsive."
+	@echo "🔍 Checking Docker Context..."
+	@docker context ls
+	@echo "📂 Checking Docker Socket..."
+	@ls -la /var/run/docker.sock ~/.docker/run/docker.sock 2>/dev/null || echo "⚠️  Standard Docker sockets not found in typical locations."
+	@echo "🏗️  Checking Sail status..."
+	@if [ -f "./vendor/bin/sail" ]; then echo "✅ Sail is installed."; else echo "❌ Sail is missing! Run 'composer install' locally."; fi
+
+.PHONY: buildFresh up down vite ssh test art refresh reset tinker log migrate diagnose

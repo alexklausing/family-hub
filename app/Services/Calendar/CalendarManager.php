@@ -31,7 +31,8 @@ class CalendarManager
             }
         }
 
-        return CalendarEventCache::whereIn('calendar_id', $calendars->pluck('id'))
+        return CalendarEventCache::with('calendar')
+            ->whereIn('calendar_id', $calendars->pluck('id'))
             ->where(function ($query) use ($start, $end) {
                 if ($start) {
                     $query->where('end', '>=', $start);
@@ -40,6 +41,7 @@ class CalendarManager
                     $query->where('start', '<=', $end);
                 }
             })
+            ->orderBy('start', 'asc')
             ->get();
     }
 
@@ -53,7 +55,7 @@ class CalendarManager
                 'apple' => $this->apple->getEvents(), // range support to be added
                 'google' => $this->google->getEvents($start, $end),
                 'office365' => $this->office->getEvents(), // range support to be added
-                'ical' => $this->ical->getEvents(),
+                'ical' => $this->ical->getEvents($calendar->credentials['url'] ?? null),
                 default => [],
             };
 

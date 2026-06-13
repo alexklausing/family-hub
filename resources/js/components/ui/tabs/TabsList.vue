@@ -1,31 +1,32 @@
 <script setup>
-import { reactiveOmit } from '@vueuse/core'
-import { TabsList } from 'reka-ui'
+import { computed } from 'vue'
+import { TabsList, useForwardProps } from 'reka-ui'
 import { cn } from '@/lib/utils'
-import { tabsListVariants } from '.'
 
 const props = defineProps({
-    loop: { type: Boolean, required: false },
-    asChild: { type: Boolean, required: false },
-    as: { type: null, required: false },
-    class: {
-        type: [Boolean, null, String, Object, Array],
-        required: false,
-        skipCheck: true,
-    },
-    variant: { type: null, required: false, default: 'default' },
+  loop: { type: Boolean, required: false },
+  asChild: { type: Boolean, required: false },
+  as: { type: null, required: false },
+  class: { type: null, required: false },
 })
 
-const delegatedProps = reactiveOmit(props, 'class', 'variant')
+const delegatedProps = computed(() => {
+  const { class: _, ...delegated } = props
+
+  return delegated
+})
+
+const forwardedProps = useForwardProps(delegatedProps)
 </script>
 
 <template>
-    <TabsList
-        data-slot="tabs-list"
-        :data-variant="variant"
-        v-bind="delegatedProps"
-        :class="cn(tabsListVariants({ variant }), props.class)"
-    >
-        <slot />
-    </TabsList>
+  <TabsList
+    v-bind="forwardedProps"
+    :class="cn(
+      'inline-flex h-14 items-center justify-center rounded-2xl bg-muted/30 p-1 text-muted-foreground backdrop-blur-xl border border-white/10 shadow-inner',
+      props.class,
+    )"
+  >
+    <slot />
+  </TabsList>
 </template>
