@@ -1,0 +1,1 @@
+# Project Context: Family Hub\n\nThis project is a high-end family dashboard for a Raspberry Pi 5.\n\n## Core Tech\n- Laravel 11 (SQLite)\n- Vue 3 (Composition API)\n- shadcn-vue (Local components)\n- Tailwind CSS v4\n\n## Active Integrations\n- Google Calendar\n- Apple Calendar (CalDAV)\n- Paprika Recipe Manager 3\n- Amazing Marvin Tasks\n- OpenWeatherMap API

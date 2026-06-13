@@ -1,0 +1,20 @@
+includes:
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+
+    level: 5
+
+    ignoreErrors:
+        # Add ignores here if needed
+
+    excludePaths:
+        # - tests/Feature/ExampleTest.php
+
+    checkMissingIterableValueType: false
