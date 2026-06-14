@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['provider', 'external_id', 'color', 'tab_id', 'credentials', 'refresh_rate', 'last_synced_at'])]
+#[Fillable(['name', 'provider', 'external_id', 'color', 'tab_id', 'credentials', 'refresh_rate', 'last_synced_at'])]
 class Calendar extends Model
 {
     use HasFactory;

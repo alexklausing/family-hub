@@ -100,10 +100,15 @@ const fetchRecipes = async (page = 1, sync = false) => {
                 sync: sync ? 1 : undefined
             }
         })
-        recipes.value = response.data.data
-        pagination.value = {
-            current_page: response.data.current_page,
-            last_page: response.data.last_page
+        
+        if (response.data && response.data.data) {
+            recipes.value = response.data.data
+            pagination.value = {
+                current_page: response.data.current_page,
+                last_page: response.data.last_page
+            }
+        } else {
+            recipes.value = []
         }
     } catch (err) {
         console.error('Failed to fetch recipes:', err)
@@ -206,7 +211,7 @@ watch(searchQuery, () => {
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    class="h-14 w-14 shrink-0 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg hover:bg-white/60 dark:hover:bg-white/10" 
+                    class="h-14 w-14 shrink-0 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border-none shadow-xl hover:bg-white/60 dark:hover:bg-white/10" 
                     @click="fetchRecipes(1, true)"
                     :disabled="isSyncing"
                 >
@@ -223,7 +228,7 @@ watch(searchQuery, () => {
             </div>
 
             <div v-else-if="error" class="flex-1 flex items-center justify-center">
-                <div class="text-center space-y-6 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-12 rounded-[3rem] border border-white/20 shadow-2xl">
+                <div class="text-center space-y-6 bg-white/40 dark:bg-white/5 backdrop-blur-xl p-12 rounded-[3rem] border-none shadow-2xl">
                     <p class="text-2xl font-black text-destructive tracking-tight">{{ error }}</p>
                     <Button class="h-14 px-10 rounded-2xl font-black text-lg" @click="fetchRecipes(1, true)">
                         <RefreshCw class="w-5 h-5 mr-3" />
@@ -232,7 +237,7 @@ watch(searchQuery, () => {
                 </div>
             </div>
 
-            <div v-else-if="recipes.length === 0" class="flex-1 flex items-center justify-center">
+            <div v-else-if="!recipes || recipes.length === 0" class="flex-1 flex items-center justify-center">
                 <div class="text-center space-y-6 opacity-40">
                     <ChefHat class="h-32 w-32 mx-auto text-muted-foreground" />
                     <p class="text-3xl font-black uppercase tracking-tighter">No recipes found</p>
@@ -248,7 +253,7 @@ watch(searchQuery, () => {
                     <Card 
                         v-for="recipe in recipes" 
                         :key="recipe.id" 
-                        class="group overflow-hidden rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.03] transition-all duration-500 cursor-pointer flex flex-col"
+                        class="group overflow-hidden rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none shadow-2xl hover:shadow-2xl hover:scale-[1.03] transition-all duration-500 cursor-pointer flex flex-col"
                         @click="openDetails(recipe)"
                     >
                         <div class="aspect-[4/3] relative overflow-hidden bg-muted">

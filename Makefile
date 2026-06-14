@@ -103,6 +103,11 @@ reset:
 	> storage/logs/laravel.log
 	@echo "✅ Reset complete."
 
+# Seed the database
+seed:
+	$(SAIL_CMD) artisan db:seed
+	@echo "✅ Seeding complete."
+
 # Access Tinker
 tinker:
 	$(SAIL_CMD) artisan tinker
@@ -123,4 +128,4 @@ diagnose:
 	@echo "🏗️  Checking Sail status..."
 	@if [ -f "./vendor/bin/sail" ]; then echo "✅ Sail is installed."; else echo "❌ Sail is missing! Run 'composer install' locally."; fi
 
-.PHONY: buildFresh up down vite ssh test art refresh reset tinker log migrate diagnose
+.PHONY: buildFresh up down vite ssh test art refresh reset tinker log migrate diagnose seed

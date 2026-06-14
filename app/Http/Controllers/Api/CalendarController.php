@@ -14,19 +14,52 @@ class CalendarController extends Controller
         protected CalendarManager $calendarManager
     ) {}
 
+    public function sync(Request $request)
+    {
+        $calendars = \App\Models\Calendar::all();
+        
+        foreach ($calendars as $calendar) {
+            // We'll run this synchronously for now as per the user's manual trigger request,
+            // but in a large production app, this should be a job.
+            $this->calendarManager->syncCalendar($calendar);
+        }
+
+        return response()->json(['message' => 'Sync complete']);
+    }
+
     public function index(Request $request)
     {
-        $profile = Profile::where('name', $request->query('profile', 'Family'))->first();
+        $profileName = $request->query('profile', 'Family');
+        $totalProfiles = Profile::count();
+        \Illuminate\Support\Facades\Log::info("Fetching events for profile: {$profileName}. Total profiles in DB: {$totalProfiles}");
+        
+        // Use case-insensitive search for PostgreSQL compatibility
+        $profile = Profile::where('name', 'ILIKE', trim($profileName))->first();
+
+        // Fallback to default profile if requested one not found
+        if (! $profile) {
+            \Illuminate\Support\Facades\Log::info("Profile '{$profileName}' not found, attempting default fallback.");
+            $profile = Profile::where('is_default', true)->first();
+        }
 
         if (! $profile) {
-            return response()->json(['error' => 'Profile not found'], 404);
+            \Illuminate\Support\Facades\Log::error("Profile '{$profileName}' and default profile not found.");
+            return response()->json([
+                'error' => "Profile '{$profileName}' not found and no default profile exists.",
+                'attempted' => $profileName
+            ], 404);
         }
+
+        \Illuminate\Support\Facades\Log::info("Profile found: {$profile->name} (ID: {$profile->id})");
 
         $tab = $profile->tabs()->whereHas('calendars')->first();
 
         if (! $tab) {
+            \Illuminate\Support\Facades\Log::info("No tab with calendars found for profile {$profile->name}");
             return response()->json(['events' => [], 'calendars' => []]);
         }
+
+        \Illuminate\Support\Facades\Log::info("Tab found: {$tab->name} (ID: {$tab->id})");
 
         $start = $request->query('start') ? Carbon::parse($request->query('start')) : now()->subMonth();
         $end = $request->query('end') ? Carbon::parse($request->query('end')) : now()->addMonths(6);

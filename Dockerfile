@@ -37,9 +37,11 @@ RUN apt-get update --fix-missing \
         libasound2 \
         libpangocairo-1.0-0 \
         libxshmfence1 \
-        fonts-liberation \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) \
+        libonig-dev \
+        libicu-dev \
+        wget \
+        && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        && docker-php-ext-install -j$(nproc) \
         pdo \
         pdo_pgsql \
         zip \
@@ -48,8 +50,8 @@ RUN apt-get update --fix-missing \
         exif \
         pcntl \
         gd \
-    && rm -rf /var/lib/apt/lists/*
-
+        intl \
+        && rm -rf /var/lib/apt/lists/*
 # --------------------------------------------------------------------
 # Install Chromium + matching ChromeDriver
 # --------------------------------------------------------------------

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('calendars', function (Blueprint $table) {
             $table->id();
+            $table->string('name')->nullable();
             $table->string('provider');
             $table->string('external_id');
             $table->string('color')->nullable();

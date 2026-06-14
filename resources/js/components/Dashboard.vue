@@ -21,14 +21,16 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { 
-    Lock, Unlock, RotateCcw, 
+    Lock, Unlock, RotateCcw, RefreshCw,
     Calendar, UtensilsCrossed, ChefHat, 
     ShoppingBag, ListTodo, ShoppingCart,
-    Clock, Sun, ArrowRight
+    Clock, Sun, ArrowRight,
+    Home, User, CloudSun
 } from 'lucide-vue-next'
 import CalendarTab from './CalendarTab.vue'
 import RecipeBrowser from './recipes/RecipeBrowser.vue'
 import ShoppingList from './shopping/ShoppingList.vue'
+import WeatherTab from './WeatherTab.vue'
 
 // Orientation Tracking
 const isVertical = ref(false)
@@ -135,10 +137,11 @@ onUnmounted(() => {
 
 // Profiles
 const profiles = [
-    { name: 'Family', icon: '🏠' },
-    { name: 'Dad', icon: '👨' },
-    { name: 'Mom', icon: '👩' },
-    { name: 'Kids', icon: '🧒' },
+    { name: 'Family', icon: Home },
+    { name: 'Alex', icon: User },
+    { name: 'Sarah', icon: User },
+    { name: 'Emily', icon: User },
+    { name: 'Henry', icon: User },
 ]
 const activeProfile = ref('Family')
 
@@ -204,6 +207,19 @@ const fetchEvents = async (start = null, end = null) => {
     }
 }
 
+const isSyncing = ref(false)
+const syncCalendars = async () => {
+    isSyncing.value = true
+    try {
+        await axios.post('/api/sync/calendars')
+        await fetchEvents()
+    } catch (error) {
+        console.error('Sync failed:', error)
+    } finally {
+        isSyncing.value = false
+    }
+}
+
 // Watch profile change to refetch
 watch(activeProfile, () => {
     fetchEvents()
@@ -215,24 +231,28 @@ watch(activeProfile, () => {
         <Tabs default-value="family" class="flex-1 flex flex-col gap-8 min-h-0">
             <!-- iOS Style Unified Header Bar -->
             <div class="flex items-center justify-center gap-6 w-full max-w-6xl mx-auto shrink-0">
-                <TabsList class="flex-1 max-w-4xl bg-white/40 dark:bg-white/5 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-xl rounded-3xl h-16 p-1.5">
-                    <TabsTrigger value="family" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-md">
+                <TabsList class="flex-1 max-w-4xl bg-white/40 dark:bg-white/5 backdrop-blur-2xl border-none shadow-none rounded-3xl h-16 p-1.5">
+                    <TabsTrigger value="family" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
                         <Calendar class="w-5 h-5" />
                         <span>Calendar</span>
                     </TabsTrigger>
-                    <TabsTrigger value="meal-plan" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-md">
+                    <TabsTrigger value="weather" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
+                        <CloudSun class="w-5 h-5" />
+                        <span>Weather</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="meal-plan" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
                         <UtensilsCrossed class="w-5 h-5" />
                         <span>Menu</span>
                     </TabsTrigger>
-                    <TabsTrigger value="recipes" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-md">
+                    <TabsTrigger value="recipes" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
                         <ChefHat class="w-5 h-5" />
                         <span>Recipes</span>
                     </TabsTrigger>
-                    <TabsTrigger value="shopping" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-md">
+                    <TabsTrigger value="shopping" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
                         <ShoppingBag class="w-5 h-5" />
                         <span>Shopping</span>
                     </TabsTrigger>
-                    <TabsTrigger value="tasks" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-md">
+                    <TabsTrigger value="tasks" class="flex-1 h-full gap-2 rounded-2xl font-black text-lg data-[state=active]:shadow-none">
                         <ListTodo class="w-5 h-5" />
                         <span>Tasks</span>
                     </TabsTrigger>
@@ -243,11 +263,11 @@ watch(activeProfile, () => {
                         variant="ghost" 
                         size="icon" 
                         @click="isEditMode = !isEditMode"
-                        :class="['h-16 w-16 rounded-3xl transition-all border', isEditMode ? 'bg-orange-500 text-white shadow-2xl shadow-orange-500/40 border-orange-400 scale-110' : 'bg-white/40 dark:bg-white/5 backdrop-blur-2xl border-white/20 dark:border-white/10 shadow-xl']"
+                        :class="['h-16 w-16 rounded-3xl transition-all', isEditMode ? 'bg-orange-500 text-white shadow-none scale-110' : 'bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-none']"
                     >
                         <component :is="isEditMode ? Unlock : Lock" class="w-7 h-7" />
                     </Button>
-                    <Button v-if="isEditMode" variant="ghost" size="icon" @click="resetLayout" class="h-16 w-16 rounded-3xl bg-white/40 dark:bg-white/5 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-xl">
+                    <Button v-if="isEditMode" variant="ghost" size="icon" @click="resetLayout" class="h-16 w-16 rounded-3xl bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-none">
                         <RotateCcw class="w-7 h-7" />
                     </Button>
                 </div>
@@ -270,55 +290,55 @@ watch(activeProfile, () => {
                             'relative group transition-all duration-300 min-h-0 h-full'
                         ]">
                             <!-- Drag Handle overlay for Edit Mode -->
-                            <div v-if="isEditMode" class="drag-handle absolute inset-0 z-50 bg-primary/5 border-4 border-dashed border-primary/30 rounded-[2.5rem] cursor-move flex items-center justify-center animate-pulse">
+                            <div v-if="isEditMode" class="drag-handle absolute inset-0 z-50 bg-primary/5 border-4 border-dashed border-white/40 rounded-[2.5rem] cursor-move flex items-center justify-center animate-pulse">
                                 <div class="bg-primary/10 p-6 rounded-full backdrop-blur-md">
                                     <Unlock class="w-16 h-16 text-primary opacity-50" />
                                 </div>
                             </div>
 
                             <!-- Status Widget (Square-ish Header) -->
-                            <Card v-if="element.id === 'header'" class="shadow-2xl rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode }">
-                                <CardContent class="p-8 lg:p-10 flex flex-col justify-between flex-1 gap-6">
+                            <Card v-if="element.id === 'header'" class="rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none shadow-none h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode }">
+                                <CardContent class="p-6 lg:p-10 pt-4 lg:pt-6 flex flex-col justify-between h-full">
                                     <!-- Clock/Weather Row -->
                                     <div class="flex items-start justify-between">
                                         <div class="flex flex-col gap-1">
-                                            <div class="text-5xl lg:text-6xl font-black tracking-tighter tabular-nums leading-none">
+                                            <div class="text-7xl lg:text-8xl font-black tracking-tighter tabular-nums leading-none">
                                                 {{ new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
-                                            <div class="text-lg font-bold opacity-40 uppercase tracking-widest mt-2">
+                                            <div class="text-xl font-bold opacity-40 uppercase tracking-widest mt-1">
                                                 {{ new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) }}
                                             </div>
                                         </div>
                                         <div class="flex flex-col items-end text-right">
-                                            <Sun class="w-10 h-10 text-yellow-500 drop-shadow-md mb-2" />
-                                            <span class="text-3xl font-black leading-none">72°F</span>
-                                            <span class="text-xs font-bold opacity-40 uppercase tracking-widest mt-1">Sunny</span>
+                                            <Sun class="w-14 h-14 text-yellow-500 drop-shadow-none mb-2" />
+                                            <span class="text-5xl font-black leading-none">72°F</span>
+                                            <span class="text-sm font-bold opacity-40 uppercase tracking-widest mt-1">Sunny</span>
                                         </div>
                                     </div>
 
                                     <!-- Profiles Grid -->
-                                    <div class="grid grid-cols-2 gap-4">
+                                    <div class="grid grid-cols-5 gap-3 w-full mt-auto">
                                         <div v-for="profile in profiles" :key="profile.name" 
                                              @mousedown="handleTouchStart(profile.name)"
                                              @mouseup="handleTouchEnd(profile.name)"
                                              @touchstart.passive="handleTouchStart(profile.name)"
                                              @touchend.passive="handleTouchEnd(profile.name)"
                                              :class="[
-                                                 'flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border-2 select-none h-16 lg:h-20',
-                                                 activeProfile === profile.name ? 'border-primary bg-primary/10 shadow-lg scale-105' : 'border-transparent bg-white/20 dark:bg-white/5 hover:bg-accent/50'
+                                                 'flex flex-col items-center justify-center gap-2 p-3 rounded-3xl cursor-pointer transition-all border-none select-none h-24 lg:h-32',
+                                                 activeProfile === profile.name ? 'bg-primary/10 scale-105 shadow-none' : 'bg-white/20 dark:bg-white/5 hover:bg-accent/50'
                                              ]">
-                                            <span class="text-2xl lg:text-3xl">{{ profile.icon }}</span>
-                                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-widest opacity-80">{{ profile.name }}</span>
+                                            <component :is="profile.icon" class="w-10 h-10 lg:w-12 lg:h-12 opacity-80" />
+                                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-widest opacity-80 text-center">{{ profile.name }}</span>
                                         </div>
                                     </div>
                                 </CardContent>
                             </Card>
 
                             <!-- Up Next Widget (Square-ish Schedule) -->
-                            <Card v-else-if="element.id === 'schedule'" class="flex flex-col shadow-2xl rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode, 'animate-wiggle': isEditMode }">
+                            <Card v-else-if="element.id === 'schedule'" class="flex flex-col shadow-none rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode, 'animate-wiggle': isEditMode }">
                                 <CardHeader class="p-8 pb-4 shrink-0">
                                     <CardTitle class="text-3xl font-black tracking-tight flex items-center gap-3">
-                                        <div class="w-3 h-8 bg-primary rounded-full shadow-lg shadow-primary/20"></div>
+                                        <div class="w-3 h-8 bg-primary rounded-full shadow-none shadow-primary/20"></div>
                                         Up Next
                                     </CardTitle>
                                 </CardHeader>
@@ -326,8 +346,8 @@ watch(activeProfile, () => {
                                     <div class="space-y-3">
                                         <div v-if="scheduleEvents.length > 0" class="space-y-3">
                                             <div v-for="event in scheduleEvents" :key="event.id" 
-                                                 class="group relative flex items-center gap-5 p-5 rounded-[1.75rem] border border-white/20 bg-white/40 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-xl transition-all cursor-pointer">
-                                                <div class="w-1.5 h-10 rounded-full shrink-0 shadow-sm" :style="{ backgroundColor: event.calendar?.color || '#3b82f6' }"></div>
+                                                 class="group relative flex items-center gap-5 p-5 rounded-[1.75rem] bg-white/40 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 shadow-none hover:shadow-none transition-all cursor-pointer">
+                                                <div class="w-1.5 h-10 rounded-full shrink-0 shadow-none" :style="{ backgroundColor: event.calendar?.color || '#3b82f6' }"></div>
                                                 <div class="flex-1 min-w-0">
                                                     <p class="font-black text-lg leading-tight tracking-tight truncate">{{ event.title }}</p>
                                                     <p class="text-muted-foreground text-[10px] font-black uppercase tracking-widest mt-0.5 opacity-60">
@@ -348,14 +368,26 @@ watch(activeProfile, () => {
                             </Card>
 
                             <!-- Full Width Calendar Widget -->
-                            <Card v-else-if="element.id === 'calendar'" class="flex flex-col shadow-2xl rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode, 'animate-wiggle': isEditMode }">
+                            <Card v-else-if="element.id === 'calendar'" class="flex flex-col shadow-none rounded-[2.5rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none h-full transition-all overflow-hidden flex flex-col" :class="{ 'scale-[0.98] blur-[2px] grayscale-[0.5]': isEditMode, 'animate-wiggle': isEditMode }">
                                 <CardHeader class="p-8 pb-4 shrink-0">
                                     <CardTitle class="text-3xl lg:text-4xl font-black tracking-tight flex items-center justify-between">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-3 h-10 bg-primary rounded-full shadow-lg shadow-primary/20"></div>
+                                            <div class="w-3 h-10 bg-primary rounded-full shadow-none shadow-primary/20"></div>
                                             Family Hub Calendar
                                         </div>
-                                        <div v-if="isLoading" class="text-[10px] font-black uppercase tracking-widest animate-pulse text-muted-foreground bg-accent/50 px-5 py-2 rounded-full border border-white/10">Syncing...</div>
+                                        <div class="flex items-center gap-3">
+                                            <div v-if="isLoading || isSyncing" class="text-[10px] font-black uppercase tracking-widest animate-pulse text-muted-foreground bg-accent/50 px-5 py-2 rounded-full border border-white/10">Syncing...</div>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                @click="syncCalendars" 
+                                                :disabled="isSyncing || isLoading"
+                                                class="rounded-2xl gap-2 font-black uppercase tracking-widest text-[10px] h-10 px-4"
+                                            >
+                                                <RefreshCw :class="['w-3 h-3', (isSyncing || isLoading) ? 'animate-spin' : '']" />
+                                                Sync Sources
+                                            </Button>
+                                        </div>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent class="flex-1 min-h-0 overflow-y-auto p-4 custom-scrollbar">
@@ -370,8 +402,12 @@ watch(activeProfile, () => {
                 </Draggable>
             </TabsContent>
 
+            <TabsContent value="weather" class="flex-1 min-h-0 overflow-hidden">
+                <WeatherTab />
+            </TabsContent>
+
             <TabsContent value="meal-plan" class="flex-1 min-h-0">
-                <Card class="rounded-[3rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 h-full flex items-center justify-center text-4xl font-black opacity-20 uppercase italic tracking-tighter">Meal Plan View</Card>
+                <Card class="rounded-[3rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none h-full flex items-center justify-center text-4xl font-black opacity-20 uppercase italic tracking-tighter">Meal Plan View</Card>
             </TabsContent>
             <TabsContent value="recipes" class="flex-1 min-h-0 overflow-hidden">
                 <RecipeBrowser />
@@ -380,13 +416,13 @@ watch(activeProfile, () => {
                 <ShoppingList />
             </TabsContent>
             <TabsContent value="tasks" class="flex-1 min-h-0">
-                <Card class="rounded-[3rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border border-white/30 dark:border-white/10 h-full flex items-center justify-center text-4xl font-black opacity-20 uppercase italic tracking-tighter">Task View</Card>
+                <Card class="rounded-[3rem] bg-white/60 dark:bg-white/5 backdrop-blur-3xl border-none h-full flex items-center justify-center text-4xl font-black opacity-20 uppercase italic tracking-tighter">Task View</Card>
             </TabsContent>
         </Tabs>
 
         <!-- Calendar Filter Dialog -->
         <Dialog v-model:open="isFilterDialogOpen">
-            <DialogContent class="sm:max-w-[500px] rounded-[3rem] p-8 border-none bg-white/95 dark:bg-black/95 backdrop-blur-3xl shadow-2xl shadow-black/40 animate-in fade-in zoom-in-95 duration-300">
+            <DialogContent class="sm:max-w-[500px] rounded-[3rem] p-8 border-none bg-white/95 dark:bg-black/95 backdrop-blur-3xl shadow-none shadow-black/40 animate-in fade-in zoom-in-95 duration-300">
                 <DialogHeader class="mb-6">
                     <DialogTitle class="text-4xl font-black tracking-tight">{{ filterProfileName }} Filters</DialogTitle>
                     <DialogDescription class="text-lg font-bold opacity-60">
@@ -396,15 +432,15 @@ watch(activeProfile, () => {
 
                 <div class="grid gap-4 py-4">
                     <div v-for="calendar in availableCalendars" :key="calendar.id" 
-                         class="flex items-center justify-between p-6 rounded-3xl border-2 transition-all cursor-pointer group"
-                         :class="filtersByProfile[filterProfileName]?.includes(calendar.id) ? 'bg-primary/5 border-primary/20 shadow-md' : 'bg-transparent border-transparent opacity-40 hover:opacity-100'"
+                         class="flex items-center justify-between p-6 rounded-3xl transition-all cursor-pointer group"
+                         :class="filtersByProfile[filterProfileName]?.includes(calendar.id) ? 'bg-primary/5 shadow-none' : 'bg-transparent opacity-40 hover:opacity-100'"
                          @click="toggleCalendar(calendar.id)"
                     >
                         <div class="flex items-center gap-5">
-                            <div class="w-5 h-5 rounded-full shadow-inner" :style="{ backgroundColor: calendar.color }"></div>
+                            <div class="w-5 h-5 rounded-full shadow-none" :style="{ backgroundColor: calendar.color }"></div>
                             <div>
                                 <Label :for="'cal-' + calendar.id" class="text-xl font-black cursor-pointer tracking-tight">
-                                    {{ calendar.provider === 'ical' ? (calendar.external_id === 'scouting' ? 'Scouting' : 'Montessori') : 'Personal iCloud' }}
+                                    {{ calendar.name }}
                                 </Label>
                                 <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-70">{{ calendar.provider }} Account</p>
                             </div>
@@ -421,7 +457,7 @@ watch(activeProfile, () => {
                 </div>
 
                 <div class="mt-8">
-                    <Button class="w-full h-16 rounded-[2rem] text-xl font-black shadow-xl hover:scale-[1.02] transition-transform active:scale-95" @click="isFilterDialogOpen = false">Done</Button>
+                    <Button class="w-full h-16 rounded-[2rem] text-xl font-black shadow-none hover:scale-[1.02] transition-transform active:scale-95" @click="isFilterDialogOpen = false">Done</Button>
                 </div>
             </DialogContent>
         </Dialog>

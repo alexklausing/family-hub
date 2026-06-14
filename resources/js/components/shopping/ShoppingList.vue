@@ -129,7 +129,7 @@ onMounted(() => {
                     
                     <div class="space-y-3">
                         <div v-for="item in items" :key="item.id" 
-                             class="flex items-center space-x-5 p-6 rounded-[2rem] border border-white/30 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-3xl transition-all hover:bg-white/80 dark:hover:bg-white/10 hover:shadow-xl group"
+                             class="flex items-center space-x-5 p-6 rounded-[2rem] border-none shadow-md group"
                              :class="{ 'opacity-40 grayscale scale-95': item.purchased }"
                              @click="toggleItem(item)"
                         >

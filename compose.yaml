@@ -1,5 +1,5 @@
 services:
-    app:
+    laravel.test:
         build:
             context: .
             dockerfile: Dockerfile
@@ -27,7 +27,7 @@ services:
         ports:
             - '${APP_PORT:-8000}:80'
         depends_on:
-            - app
+            - laravel.test
         networks:
             - sail
 
