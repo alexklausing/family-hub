@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'is_default', 'order'])]
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['name', 'is_default', 'order', 'default_calendar_id'])]
 class Profile extends Model
 {
     use HasFactory;
@@ -23,5 +25,10 @@ class Profile extends Model
     public function tabs(): HasMany
     {
         return $this->hasMany(Tab::class)->orderBy('order');
+    }
+
+    public function defaultCalendar(): BelongsTo
+    {
+        return $this->belongsTo(Calendar::class, 'default_calendar_id');
     }
 }

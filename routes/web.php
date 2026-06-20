@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\CalendarManagementController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
@@ -12,6 +13,12 @@ Route::get('/', function () {
 
 Route::get('/api/events', [CalendarController::class, 'index']);
 Route::post('/api/sync/calendars', [CalendarController::class, 'sync']);
+Route::post('/api/calendars/{calendar}/events', [CalendarController::class, 'storeEvent']);
+Route::post('/api/calendars/apple/fetch', [CalendarManagementController::class, 'fetchAppleCalendars']);
+Route::post('/api/calendars', [CalendarManagementController::class, 'store']);
+Route::put('/api/calendars/{calendar}', [CalendarManagementController::class, 'update']);
+Route::delete('/api/calendars/{calendar}', [CalendarManagementController::class, 'destroy']);
+Route::post('/api/profiles/{name}/default-calendar', [CalendarManagementController::class, 'setDefaultCalendar']);
 
 Route::get('/api/weather', [WeatherController::class, 'index']);
 

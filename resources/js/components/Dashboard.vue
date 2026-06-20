@@ -26,6 +26,9 @@ const {
     fetchEvents,
     toggleCalendar,
     handleSync,
+    localTimezone,
+    saveFilters,
+    defaultCalendarId,
 } = useDashboard()
 
 // Profiles definition (static layout configuration)
@@ -69,8 +72,11 @@ const handleSyncRequest = (option) => {
                         :activeProfile="activeProfile"
                         :profiles="profiles"
                         :availableCalendars="availableCalendars"
+                        :defaultCalendarId="defaultCalendarId"
                         :visibleCalendarIds="visibleCalendarIds"
+                        :localTimezone="localTimezone"
                         @update:activeProfile="activeProfile = $event"
+                        @update:defaultCalendar="defaultCalendarId = $event"
                         @toggle-calendar="toggleCalendar"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
                     />
@@ -103,8 +109,10 @@ const handleSyncRequest = (option) => {
         <SettingsDialog
             v-model:open="isSettingsDialogOpen"
             v-model:isEditMode="isEditMode"
+            v-model:localTimezone="localTimezone"
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
+            @update:localTimezone="saveFilters"
         />
 
         <!-- Smart Sync Selection Dialog Component -->

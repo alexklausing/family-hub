@@ -92,6 +92,9 @@ class CalendarController extends Controller
             ->get();
 
         $formattedEvents = $events->map(function ($event) {
+            // Description might be directly on the event cache or inside the raw 'data' json depending on implementation
+            $description = $event->description ?? ($event->data['description'] ?? '');
+            
             return [
                 'id' => $event->id,
                 'calendar_id' => $event->calendar_id,
@@ -99,6 +102,7 @@ class CalendarController extends Controller
                 'start' => $event->all_day ? $event->start->format('Y-m-d') : $event->start->toIso8601String(),
                 'end' => $event->all_day ? $event->end->format('Y-m-d') : $event->end->toIso8601String(),
                 'all_day' => (bool) $event->all_day,
+                'description' => $description,
                 'calendar' => $event->calendar,
             ];
         });
@@ -106,6 +110,33 @@ class CalendarController extends Controller
         return response()->json([
             'events' => $formattedEvents,
             'calendars' => $tab->calendars,
+            'default_calendar_id' => $profile->default_calendar_id,
         ]);
+    }
+
+    public function storeEvent(Request $request, Calendar $calendar)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'start' => 'required|date',
+            'end' => 'required|date|after_or_equal:start',
+            'all_day' => 'boolean',
+            'timezone' => 'string|nullable',
+            'description' => 'string|nullable',
+        ]);
+
+        if ($calendar->provider !== 'apple') {
+            return response()->json(['error' => 'This calendar provider does not support creating events via this application.'], 400);
+        }
+
+        $success = $this->calendarManager->createEvent($calendar, $validated);
+
+        if ($success) {
+            // Trigger a sync so the event shows up quickly
+            $this->calendarManager->syncCalendar($calendar);
+            return response()->json(['message' => 'Event created successfully']);
+        }
+
+        return response()->json(['error' => 'Failed to create event on the remote calendar.'], 500);
     }
 }

@@ -52,7 +52,7 @@ class CalendarManager
     {
         try {
             $events = match ($calendar->provider) {
-                'apple' => $this->apple->getEvents(), // range support to be added
+                'apple' => $this->apple->getEvents($calendar->credentials['email'] ?? null, $calendar->credentials['password'] ?? null, $calendar->credentials['path'] ?? null),
                 'google' => $this->google->getEvents($start, $end),
                 'office365' => $this->office->getEvents(), // range support to be added
                 'ical' => $this->ical->getEvents($calendar->credentials['url'] ?? null),
@@ -69,8 +69,8 @@ class CalendarManager
                     ],
                     [
                         'title' => $eventData['title'],
-                        'start' => Carbon::parse($eventData['start']),
-                        'end' => Carbon::parse($eventData['end']),
+                        'start' => Carbon::parse($eventData['start'])->setTimezone('UTC'),
+                        'end' => Carbon::parse($eventData['end'])->setTimezone('UTC'),
                         'all_day' => $eventData['all_day'] ?? false,
                         'data' => $eventData,
                     ]
@@ -82,5 +82,23 @@ class CalendarManager
         } catch (\Exception $e) {
             Log::error("Sync failed for calendar {$calendar->id} ({$calendar->provider}): ".$e->getMessage());
         }
+    }
+
+    /**
+     * Create an event on the remote calendar provider.
+     */
+    public function createEvent(Calendar $calendar, array $eventDetails): bool
+    {
+        return match ($calendar->provider) {
+            'apple' => $this->apple->createEvent(
+                $calendar->credentials['email'] ?? '',
+                $calendar->credentials['password'] ?? '',
+                $calendar->credentials['path'] ?? '',
+                $eventDetails
+            ),
+            // 'google' => $this->google->createEvent($calendar, $eventDetails),
+            // 'office365' => $this->office->createEvent($calendar, $eventDetails),
+            default => false,
+        };
     }
 }

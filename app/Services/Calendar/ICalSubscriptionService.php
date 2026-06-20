@@ -61,7 +61,7 @@ class ICalSubscriptionService
 
                 if (isset($vcal->VEVENT)) {
                     foreach ($vcal->VEVENT as $vevent) {
-                        $isAllDay = ! isset($vevent->DTSTART['VALUE']) || (string) $vevent->DTSTART['VALUE'] === 'DATE';
+                        $isAllDay = ! $vevent->DTSTART->hasTime();
                         $start = $vevent->DTSTART->getDateTime();
                         $end = isset($vevent->DTEND) ? $vevent->DTEND->getDateTime() : (clone $start)->modify('+1 hour');
 

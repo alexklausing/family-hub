@@ -20,8 +20,17 @@ class AppleCalendarService
 
     public function __construct()
     {
+        // Default to environment variables if not specified in method calls
         $this->email = config('services.apple.email') ?? '';
         $this->password = config('services.apple.password') ?? '';
+
+        $this->initClient($this->email, $this->password);
+    }
+
+    protected function initClient(?string $email, ?string $password): void
+    {
+        $this->email = $email ?? config('services.apple.email') ?? '';
+        $this->password = $password ?? config('services.apple.password') ?? '';
 
         $this->client = new Client([
             'baseUri' => $this->baseUrl,
@@ -31,10 +40,29 @@ class AppleCalendarService
     }
 
     /**
+     * Test the CalDAV connection synchronously.
+     */
+    public function testConnection(string $email, string $password): bool
+    {
+        $this->initClient($email, $password);
+
+        try {
+            $response = $this->client->propFind('', ['{DAV:}current-user-principal'], 0);
+            return !empty($response['{DAV:}current-user-principal']);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
      * Fetch all events from the user's iCloud calendars.
      */
-    public function getEvents(): array
+    public function getEvents(?string $email = null, ?string $password = null, ?string $calendarPath = null): array
     {
+        if ($email || $password) {
+            $this->initClient($email, $password);
+        }
+
         if (empty($this->email) || empty($this->password)) {
             return [];
         }
@@ -61,12 +89,151 @@ class AppleCalendarService
                 $calendarHomeSet = ltrim($parts['path'] ?? $calendarHomeSet, '/');
             }
 
+            if ($calendarPath) {
+                return $this->fetchEventsFromCalendar($calendarPath);
+            }
+
             // 3. List calendars and fetch events from them
             return $this->fetchEventsFromCalendars($calendarHomeSet);
         } catch (\Exception $e) {
             \Log::error('iCloud Sync Error ('.get_class($e).'): '.$e->getMessage());
 
             return [];
+        }
+    }
+
+    /**
+     * Fetch a list of calendars available on the iCloud account.
+     */
+    public function getCalendars(string $email, string $password): array
+    {
+        $this->initClient($email, $password);
+
+        try {
+            $principalUrl = $this->getPrincipalUrl();
+            $calendarHomeSet = $this->getCalendarHomeSet($principalUrl);
+
+            if (str_starts_with($calendarHomeSet, 'http')) {
+                $parts = parse_url($calendarHomeSet);
+                $newBase = ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? 'caldav.icloud.com').(isset($parts['port']) ? ':'.$parts['port'] : '').'/';
+                $this->client = new Client([
+                    'baseUri' => $newBase,
+                    'userName' => $this->email,
+                    'password' => $this->password,
+                ]);
+                $calendarHomeSet = ltrim($parts['path'] ?? $calendarHomeSet, '/');
+            }
+
+            $calendars = $this->client->propFind($calendarHomeSet, [
+                '{DAV:}displayname',
+            ], 1);
+
+            $result = [];
+            foreach ($calendars as $path => $props) {
+                if (isset($props['{DAV:}displayname'])) {
+                    $name = is_array($props['{DAV:}displayname']) && isset($props['{DAV:}displayname'][0]['value']) 
+                        ? $props['{DAV:}displayname'][0]['value'] 
+                        : $props['{DAV:}displayname'];
+                    
+                    if (is_string($name) && !empty($name)) {
+                        $result[] = [
+                            'name' => $name,
+                            'path' => $path,
+                        ];
+                    }
+                }
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function createEvent(string $email, string $password, string $calendarPath, array $eventDetails): bool
+    {
+        $this->initClient($email, $password);
+
+        try {
+            $principalUrl = $this->getPrincipalUrl();
+            $calendarHomeSet = $this->getCalendarHomeSet($principalUrl);
+
+            if (str_starts_with($calendarHomeSet, 'http')) {
+                $parts = parse_url($calendarHomeSet);
+                $newBase = ($parts['scheme'] ?? 'https').'://'.($parts['host'] ?? 'caldav.icloud.com').(isset($parts['port']) ? ':'.$parts['port'] : '').'/';
+                $this->client = new Client([
+                    'baseUri' => $newBase,
+                    'userName' => $this->email,
+                    'password' => $this->password,
+                ]);
+            }
+
+            $uuid = \Illuminate\Support\Str::uuid()->toString();
+            $now = gmdate("Ymd\THis\Z");
+            
+            $isAllDay = filter_var($eventDetails['all_day'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $tz = $eventDetails['timezone'] ?? 'UTC';
+            $title = $eventDetails['title'] ?? 'New Event';
+            $description = $eventDetails['description'] ?? '';
+            
+            if ($isAllDay) {
+                $start = \Carbon\Carbon::parse($eventDetails['start'])->format('Ymd');
+                // All-day end dates in CalDAV must be exclusive (+1 day) if it's a 1-day event
+                // Usually the frontend sends the exact same day for start/end if it's 1 day
+                $end = \Carbon\Carbon::parse($eventDetails['end']);
+                if (\Carbon\Carbon::parse($eventDetails['start'])->isSameDay($end)) {
+                    $end->addDay();
+                }
+                $endStr = $end->format('Ymd');
+                
+                $dtStart = "DTSTART;VALUE=DATE:{$start}";
+                $dtEnd = "DTEND;VALUE=DATE:{$endStr}";
+            } else {
+                $startObj = \Carbon\Carbon::parse($eventDetails['start'], $tz)->setTimezone('UTC');
+                $endObj = \Carbon\Carbon::parse($eventDetails['end'], $tz)->setTimezone('UTC');
+                
+                $start = $startObj->format('Ymd\THis\Z');
+                $end = $endObj->format('Ymd\THis\Z');
+                
+                $dtStart = "DTSTART:{$start}";
+                $dtEnd = "DTEND:{$end}";
+            }
+
+            $vcal = "BEGIN:VCALENDAR\r\n";
+            $vcal .= "VERSION:2.0\r\n";
+            $vcal .= "PRODID:-//FamilyHub//EN\r\n";
+            $vcal .= "BEGIN:VEVENT\r\n";
+            $vcal .= "UID:{$uuid}\r\n";
+            $vcal .= "DTSTAMP:{$now}\r\n";
+            $vcal .= "{$dtStart}\r\n";
+            $vcal .= "{$dtEnd}\r\n";
+            $vcal .= "SUMMARY:{$title}\r\n";
+            if (!empty($description)) {
+                // Escape newlines for VCALENDAR
+                $escapedDesc = str_replace(["\r\n", "\n", "\r"], "\\n", $description);
+                $vcal .= "DESCRIPTION:{$escapedDesc}\r\n";
+            }
+            $vcal .= "END:VEVENT\r\n";
+            $vcal .= "END:VCALENDAR\r\n";
+
+            $url = $this->client->getAbsoluteUrl(rtrim($calendarPath, '/') . '/' . $uuid . '.ics');
+
+            $request = new \Sabre\HTTP\Request('PUT', $url, [
+                'Content-Type' => 'text/calendar; charset=utf-8',
+                'If-None-Match' => '*',
+            ], $vcal);
+
+            $response = $this->client->send($request);
+
+            if ($response->getStatus() >= 200 && $response->getStatus() < 300) {
+                return true;
+            }
+
+            \Log::error('iCloud Create Event failed: ' . $response->getStatus() . ' - ' . $response->getBodyAsString());
+            return false;
+        } catch (\Exception $e) {
+            \Log::error('iCloud Sync Error ('.get_class($e).'): '.$e->getMessage());
+            return false;
         }
     }
 
@@ -194,7 +361,7 @@ class AppleCalendarService
                         $start = $vevent->DTSTART->getDateTime();
                         $end = $vevent->DTEND ? $vevent->DTEND->getDateTime() : $start;
 
-                        $isAllDay = ! isset($vevent->DTSTART['VALUE']) || (string) $vevent->DTSTART['VALUE'] === 'DATE';
+                        $isAllDay = ! $vevent->DTSTART->hasTime();
 
                         $events[] = [
                             'id' => (string) $vevent->UID,

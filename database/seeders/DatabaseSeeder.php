@@ -85,6 +85,16 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
+        if (!empty(config('services.apple.email'))) {
+            $calendars[] = [
+                'provider' => 'apple',
+                'external_id' => 'apple_main',
+                'name' => 'Apple',
+                'color' => '#9333ea', // Purple for Apple calendars
+                'credentials' => [],
+            ];
+        }
+
         foreach ($calendars as $c) {
             $tab->calendars()->updateOrCreate(
                 ['provider' => $c['provider'], 'external_id' => $c['external_id']],

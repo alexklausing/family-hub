@@ -12,11 +12,20 @@ export function useDashboard() {
 
     // Calendars and Filtering
     const availableCalendars = ref([])
+    const defaultCalendarId = ref(null)
     const filtersByProfile = ref({})
+
+    // Timezone
+    const localTimezone = ref(
+        Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    )
 
     const loadFilters = () => {
         const saved = localStorage.getItem('dashboard_filters_map')
         if (saved) filtersByProfile.value = JSON.parse(saved)
+
+        const savedTimezone = localStorage.getItem('dashboard_timezone')
+        if (savedTimezone) localTimezone.value = savedTimezone
     }
 
     const saveFilters = () => {
@@ -24,6 +33,7 @@ export function useDashboard() {
             'dashboard_filters_map',
             JSON.stringify(filtersByProfile.value),
         )
+        localStorage.setItem('dashboard_timezone', localTimezone.value)
     }
 
     const visibleCalendarIds = computed(() => {
@@ -66,16 +76,29 @@ export function useDashboard() {
             })
             allEvents.value = response.data.events
             availableCalendars.value = response.data.calendars
+            defaultCalendarId.value = response.data.default_calendar_id || null
 
-            // Use numeric IDs consistently in state
-            if (!filtersByProfile.value[activeProfile.value]) {
-                filtersByProfile.value[activeProfile.value] =
-                    availableCalendars.value.map((c) => Number(c.id))
+            // Automatically enable newly added calendars
+            const knownIds = filtersByProfile.value[activeProfile.value] || []
+            const fetchedIds = availableCalendars.value.map((c) => Number(c.id))
+            if (knownIds.length === 0) {
+                filtersByProfile.value[activeProfile.value] = fetchedIds
+            } else {
+                const newIds = fetchedIds.filter(id => !knownIds.includes(id))
+                if (newIds.length > 0) {
+                    filtersByProfile.value[activeProfile.value] = [...knownIds, ...newIds]
+                }
             }
             saveFilters()
 
             if (!start && !end) {
                 scheduleEvents.value = response.data.events
+            } else if (scheduleEvents.value.length === 0 || fetchedIds.filter(id => !knownIds.includes(id)).length > 0) {
+                // Fetch schedule events separately if we just added a calendar
+                axios.get('/api/events', { params: { profile: activeProfile.value } })
+                    .then(res => {
+                        scheduleEvents.value = res.data.events
+                    })
             }
         } catch (error) {
             console.error('Failed to fetch events:', error)
@@ -145,6 +168,8 @@ export function useDashboard() {
         activeProfile,
         availableCalendars,
         filtersByProfile,
+        localTimezone,
+        saveFilters,
         visibleCalendarIds,
         allEvents,
         scheduleEvents,
@@ -156,5 +181,6 @@ export function useDashboard() {
         toggleCalendar,
         handleSync,
         resetLayout,
+        defaultCalendarId,
     }
 }
