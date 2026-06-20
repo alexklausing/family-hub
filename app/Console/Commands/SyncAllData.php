@@ -7,7 +7,6 @@ use App\Jobs\SyncPaprikaShoppingList;
 use App\Models\Calendar;
 use App\Services\Calendar\CalendarManager;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class SyncAllData extends Command
 {
@@ -31,7 +30,7 @@ class SyncAllData extends Command
     public function handle(CalendarManager $calendarManager)
     {
         $this->info('Dispatching background sync jobs...');
-        
+
         // 1. Paprika
         SyncPaprikaRecipes::dispatch();
         SyncPaprikaShoppingList::dispatch();
@@ -40,7 +39,7 @@ class SyncAllData extends Command
         // 2. Calendars
         $calendars = Calendar::all();
         foreach ($calendars as $calendar) {
-            // We can dispatch these too or run them here if they are fast, 
+            // We can dispatch these too or run them here if they are fast,
             // but jobs are safer for memory.
             // For now, let's just trigger the manager's sync which we'll optimize.
             $calendarManager->syncCalendar($calendar);

@@ -1,8 +1,8 @@
 # Family Hub Management
 
 SAIL=./vendor/bin/sail
-APP_SERVICE=app
-SAIL_CMD=APP_SERVICE=$(APP_SERVICE) $(SAIL)
+APP_SERVICE=laravel.test
+SAIL_CMD=$(SAIL)
 
 # --- Main Commands ---
 
@@ -53,7 +53,7 @@ test:
 	@echo "🧪 Running Pest (PHP)..."
 	$(SAIL_CMD) pest
 	@echo "🧪 Running Vitest (JS)..."
-	npm run test
+	npm run vitest
 
 # Run Static Analysis (PHPStan)
 stan:
@@ -129,3 +129,7 @@ diagnose:
 	@if [ -f "./vendor/bin/sail" ]; then echo "✅ Sail is installed."; else echo "❌ Sail is missing! Run 'composer install' locally."; fi
 
 .PHONY: buildFresh up down vite ssh test art refresh reset tinker log migrate diagnose seed
+
+cli:
+	agy
+	

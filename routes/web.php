@@ -24,5 +24,3 @@ Route::post('/api/shopping-list', [ShoppingListController::class, 'store']);
 Route::delete('/api/shopping-list', [ShoppingListController::class, 'destroyAll']);
 Route::post('/api/shopping-list/{item}/toggle', [ShoppingListController::class, 'toggle']);
 Route::post('/api/shopping-list/add-recipe', [ShoppingListController::class, 'addRecipe']);
-
-

@@ -17,4 +17,3 @@ parameters:
     excludePaths:
         # - tests/Feature/ExampleTest.php
 
-    checkMissingIterableValueType: false

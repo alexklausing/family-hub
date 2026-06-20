@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class WeatherController extends Controller
 {
@@ -15,7 +14,7 @@ class WeatherController extends Controller
         $lon = config('services.openweathermap.lon');
         $apiKey = config('services.openweathermap.key');
 
-        if (!$lat || !$lon || !$apiKey) {
+        if (! $lat || ! $lon || ! $apiKey) {
             return response()->json(['error' => 'Weather configuration missing'], 500);
         }
 
@@ -29,7 +28,7 @@ class WeatherController extends Controller
                 'units' => 'imperial',
                 'exclude' => 'minutely',
             ]);
-            
+
             if ($response->failed()) {
                 // Try fallback to standard 5-day if OneCall 3.0 is not subscribed
                 $currentResponse = Http::get('https://api.openweathermap.org/data/2.5/weather', [
@@ -119,10 +118,10 @@ class WeatherController extends Controller
         // Fetch Alerts from NWS (US only)
         $alerts = Cache::remember('weather_alerts', 300, function () use ($lat, $lon) {
             $response = Http::withHeaders(['User-Agent' => 'FamilyHub/1.0'])
-                ->get("https://api.weather.gov/alerts/active", [
-                    'point' => "{$lat},{$lon}"
+                ->get('https://api.weather.gov/alerts/active', [
+                    'point' => "{$lat},{$lon}",
                 ]);
-            
+
             return $response->json()['features'] ?? [];
         });
 
@@ -131,9 +130,9 @@ class WeatherController extends Controller
             'alerts' => $alerts,
             'location' => [
                 'lat' => $lat,
-                'lon' => $lon
+                'lon' => $lon,
             ],
-            'apiKey' => $apiKey
+            'apiKey' => $apiKey,
         ]);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncPaprikaShoppingList;
 use App\Models\ShoppingListItem;
 use App\Services\PaprikaSyncService;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class ShoppingListController extends Controller
     public function index(Request $request)
     {
         if ($request->has('sync') || ShoppingListItem::count() === 0) {
-            \App\Jobs\SyncPaprikaShoppingList::dispatch();
+            SyncPaprikaShoppingList::dispatch();
             if ($request->has('sync')) {
                 return response()->json(['message' => 'Sync initiated in background'], 202);
             }
@@ -69,8 +70,8 @@ class ShoppingListController extends Controller
         ]);
 
         $success = $this->paprikaService->addRecipeToShoppingList(
-            $request->recipe_uuid, 
-            (float)($request->scale ?? 1.0)
+            $request->recipe_uuid,
+            (float) ($request->scale ?? 1.0)
         );
 
         return response()->json(['success' => $success]);
