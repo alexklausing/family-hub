@@ -5,6 +5,7 @@ import CalendarTab from './CalendarTab.vue'
 import RecipeBrowser from './recipes/RecipeBrowser.vue'
 import ShoppingList from './shopping/ShoppingList.vue'
 import WeatherTab from './WeatherTab.vue'
+import ChoresTab from './chores/ChoresTab.vue'
 
 // Extracted Subcomponents & Composable
 import { useDashboard } from './dashboard/useDashboard'
@@ -29,6 +30,7 @@ const {
     localTimezone,
     saveFilters,
     defaultCalendarId,
+    reorderCalendars,
 } = useDashboard()
 
 // Profiles definition (static layout configuration)
@@ -78,6 +80,7 @@ const handleSyncRequest = (option) => {
                         @update:activeProfile="activeProfile = $event"
                         @update:defaultCalendar="defaultCalendarId = $event"
                         @toggle-calendar="toggleCalendar"
+                        @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
                     />
                 </TabsContent>
@@ -101,6 +104,17 @@ const handleSyncRequest = (option) => {
                     class="m-0 h-full p-0 focus-visible:ring-0"
                 >
                     <ShoppingList />
+                </TabsContent>
+
+                <TabsContent
+                    value="chores"
+                    class="m-0 h-full p-0 focus-visible:ring-0"
+                >
+                    <ChoresTab
+                        :profiles="profiles"
+                        :activeProfile="activeProfile"
+                        @update:activeProfile="activeProfile = $event"
+                    />
                 </TabsContent>
             </div>
         </Tabs>

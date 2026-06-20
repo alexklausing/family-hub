@@ -3,6 +3,8 @@
 namespace App\Services\Calendar;
 
 use App\Models\Calendar;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Sabre\Dav\Client;
 use Sabre\HTTP\Request;
 use Sabre\VObject;
@@ -48,7 +50,8 @@ class AppleCalendarService
 
         try {
             $response = $this->client->propFind('', ['{DAV:}current-user-principal'], 0);
-            return !empty($response['{DAV:}current-user-principal']);
+
+            return ! empty($response['{DAV:}current-user-principal']);
         } catch (\Exception $e) {
             return false;
         }
@@ -131,11 +134,11 @@ class AppleCalendarService
             $result = [];
             foreach ($calendars as $path => $props) {
                 if (isset($props['{DAV:}displayname'])) {
-                    $name = is_array($props['{DAV:}displayname']) && isset($props['{DAV:}displayname'][0]['value']) 
-                        ? $props['{DAV:}displayname'][0]['value'] 
+                    $name = is_array($props['{DAV:}displayname']) && isset($props['{DAV:}displayname'][0]['value'])
+                        ? $props['{DAV:}displayname'][0]['value']
                         : $props['{DAV:}displayname'];
-                    
-                    if (is_string($name) && !empty($name)) {
+
+                    if (is_string($name) && ! empty($name)) {
                         $result[] = [
                             'name' => $name,
                             'path' => $path,
@@ -168,33 +171,33 @@ class AppleCalendarService
                 ]);
             }
 
-            $uuid = \Illuminate\Support\Str::uuid()->toString();
+            $uuid = Str::uuid()->toString();
             $now = gmdate("Ymd\THis\Z");
-            
+
             $isAllDay = filter_var($eventDetails['all_day'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $tz = $eventDetails['timezone'] ?? 'UTC';
             $title = $eventDetails['title'] ?? 'New Event';
             $description = $eventDetails['description'] ?? '';
-            
+
             if ($isAllDay) {
-                $start = \Carbon\Carbon::parse($eventDetails['start'])->format('Ymd');
+                $start = Carbon::parse($eventDetails['start'])->format('Ymd');
                 // All-day end dates in CalDAV must be exclusive (+1 day) if it's a 1-day event
                 // Usually the frontend sends the exact same day for start/end if it's 1 day
-                $end = \Carbon\Carbon::parse($eventDetails['end']);
-                if (\Carbon\Carbon::parse($eventDetails['start'])->isSameDay($end)) {
+                $end = Carbon::parse($eventDetails['end']);
+                if (Carbon::parse($eventDetails['start'])->isSameDay($end)) {
                     $end->addDay();
                 }
                 $endStr = $end->format('Ymd');
-                
+
                 $dtStart = "DTSTART;VALUE=DATE:{$start}";
                 $dtEnd = "DTEND;VALUE=DATE:{$endStr}";
             } else {
-                $startObj = \Carbon\Carbon::parse($eventDetails['start'], $tz)->setTimezone('UTC');
-                $endObj = \Carbon\Carbon::parse($eventDetails['end'], $tz)->setTimezone('UTC');
-                
+                $startObj = Carbon::parse($eventDetails['start'], $tz)->setTimezone('UTC');
+                $endObj = Carbon::parse($eventDetails['end'], $tz)->setTimezone('UTC');
+
                 $start = $startObj->format('Ymd\THis\Z');
                 $end = $endObj->format('Ymd\THis\Z');
-                
+
                 $dtStart = "DTSTART:{$start}";
                 $dtEnd = "DTEND:{$end}";
             }
@@ -208,17 +211,17 @@ class AppleCalendarService
             $vcal .= "{$dtStart}\r\n";
             $vcal .= "{$dtEnd}\r\n";
             $vcal .= "SUMMARY:{$title}\r\n";
-            if (!empty($description)) {
+            if (! empty($description)) {
                 // Escape newlines for VCALENDAR
-                $escapedDesc = str_replace(["\r\n", "\n", "\r"], "\\n", $description);
+                $escapedDesc = str_replace(["\r\n", "\n", "\r"], '\\n', $description);
                 $vcal .= "DESCRIPTION:{$escapedDesc}\r\n";
             }
             $vcal .= "END:VEVENT\r\n";
             $vcal .= "END:VCALENDAR\r\n";
 
-            $url = $this->client->getAbsoluteUrl(rtrim($calendarPath, '/') . '/' . $uuid . '.ics');
+            $url = $this->client->getAbsoluteUrl(rtrim($calendarPath, '/').'/'.$uuid.'.ics');
 
-            $request = new \Sabre\HTTP\Request('PUT', $url, [
+            $request = new Request('PUT', $url, [
                 'Content-Type' => 'text/calendar; charset=utf-8',
                 'If-None-Match' => '*',
             ], $vcal);
@@ -229,10 +232,12 @@ class AppleCalendarService
                 return true;
             }
 
-            \Log::error('iCloud Create Event failed: ' . $response->getStatus() . ' - ' . $response->getBodyAsString());
+            \Log::error('iCloud Create Event failed: '.$response->getStatus().' - '.$response->getBodyAsString());
+
             return false;
         } catch (\Exception $e) {
             \Log::error('iCloud Sync Error ('.get_class($e).'): '.$e->getMessage());
+
             return false;
         }
     }

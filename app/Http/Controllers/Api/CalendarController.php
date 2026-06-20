@@ -94,7 +94,7 @@ class CalendarController extends Controller
         $formattedEvents = $events->map(function ($event) {
             // Description might be directly on the event cache or inside the raw 'data' json depending on implementation
             $description = $event->description ?? ($event->data['description'] ?? '');
-            
+
             return [
                 'id' => $event->id,
                 'calendar_id' => $event->calendar_id,
@@ -134,6 +134,7 @@ class CalendarController extends Controller
         if ($success) {
             // Trigger a sync so the event shows up quickly
             $this->calendarManager->syncCalendar($calendar);
+
             return response()->json(['message' => 'Event created successfully']);
         }
 

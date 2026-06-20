@@ -7,6 +7,7 @@ import {
     CloudSun,
     ChefHat,
     ShoppingBag,
+    CheckSquare,
     Sun,
     Settings,
 } from 'lucide-vue-next'
@@ -64,9 +65,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <!-- Tab Navigation (Center) -->
         <TabsList
-            class="h-16 max-w-2xl flex-1 rounded-3xl border-none bg-white/40 p-1.5 shadow-none backdrop-blur-2xl dark:bg-white/5"
+            class="h-16 w-fit rounded-3xl border-none bg-white/40 p-1.5 shadow-none backdrop-blur-2xl dark:bg-white/5"
         >
             <TabsTrigger
                 value="family"
@@ -95,6 +95,13 @@ onUnmounted(() => {
             >
                 <ShoppingBag class="h-5 w-5" />
                 <span class="hidden lg:inline">Shopping</span>
+            </TabsTrigger>
+            <TabsTrigger
+                value="chores"
+                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
+            >
+                <CheckSquare class="h-5 w-5" />
+                <span class="hidden lg:inline">Chores</span>
             </TabsTrigger>
         </TabsList>
 

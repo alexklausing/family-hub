@@ -20,12 +20,18 @@ export function useDashboard() {
         Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
     )
 
+    // Calendar Order
+    const calendarOrder = ref([])
+
     const loadFilters = () => {
         const saved = localStorage.getItem('dashboard_filters_map')
         if (saved) filtersByProfile.value = JSON.parse(saved)
 
         const savedTimezone = localStorage.getItem('dashboard_timezone')
         if (savedTimezone) localTimezone.value = savedTimezone
+
+        const savedOrder = localStorage.getItem('dashboard_calendar_order')
+        if (savedOrder) calendarOrder.value = JSON.parse(savedOrder)
     }
 
     const saveFilters = () => {
@@ -34,6 +40,10 @@ export function useDashboard() {
             JSON.stringify(filtersByProfile.value),
         )
         localStorage.setItem('dashboard_timezone', localTimezone.value)
+        localStorage.setItem(
+            'dashboard_calendar_order',
+            JSON.stringify(calendarOrder.value),
+        )
     }
 
     const visibleCalendarIds = computed(() => {
@@ -75,7 +85,23 @@ export function useDashboard() {
                 },
             })
             allEvents.value = response.data.events
-            availableCalendars.value = response.data.calendars
+
+            let fetchedCalendars = response.data.calendars
+            if (calendarOrder.value.length > 0) {
+                fetchedCalendars.sort((a, b) => {
+                    const idxA = calendarOrder.value.indexOf(a.id)
+                    const idxB = calendarOrder.value.indexOf(b.id)
+                    if (idxA === -1 && idxB === -1) return 0
+                    if (idxA === -1) return 1
+                    if (idxB === -1) return -1
+                    return idxA - idxB
+                })
+            } else {
+                calendarOrder.value = fetchedCalendars.map((c) => c.id)
+                saveFilters()
+            }
+            availableCalendars.value = fetchedCalendars
+
             defaultCalendarId.value = response.data.default_calendar_id || null
 
             // Automatically enable newly added calendars
@@ -84,19 +110,28 @@ export function useDashboard() {
             if (knownIds.length === 0) {
                 filtersByProfile.value[activeProfile.value] = fetchedIds
             } else {
-                const newIds = fetchedIds.filter(id => !knownIds.includes(id))
+                const newIds = fetchedIds.filter((id) => !knownIds.includes(id))
                 if (newIds.length > 0) {
-                    filtersByProfile.value[activeProfile.value] = [...knownIds, ...newIds]
+                    filtersByProfile.value[activeProfile.value] = [
+                        ...knownIds,
+                        ...newIds,
+                    ]
                 }
             }
             saveFilters()
 
             if (!start && !end) {
                 scheduleEvents.value = response.data.events
-            } else if (scheduleEvents.value.length === 0 || fetchedIds.filter(id => !knownIds.includes(id)).length > 0) {
+            } else if (
+                scheduleEvents.value.length === 0 ||
+                fetchedIds.filter((id) => !knownIds.includes(id)).length > 0
+            ) {
                 // Fetch schedule events separately if we just added a calendar
-                axios.get('/api/events', { params: { profile: activeProfile.value } })
-                    .then(res => {
+                axios
+                    .get('/api/events', {
+                        params: { profile: activeProfile.value },
+                    })
+                    .then((res) => {
                         scheduleEvents.value = res.data.events
                     })
             }
@@ -127,6 +162,12 @@ export function useDashboard() {
         }
 
         filtersByProfile.value[profile] = currentIds
+        saveFilters()
+    }
+
+    const reorderCalendars = (newOrder) => {
+        availableCalendars.value = newOrder
+        calendarOrder.value = newOrder.map((c) => c.id)
         saveFilters()
     }
 

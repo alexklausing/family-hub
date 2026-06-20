@@ -108,10 +108,17 @@ class PaprikaSyncService
             Log::info('Paprika: Found '.(is_array($recipes) ? count($recipes) : 0).' recipes in cloud.');
 
             if (is_array($recipes)) {
+                $syncedUuids = [];
                 foreach ($recipes as $recipeData) {
-                    if (is_array($recipeData)) {
+                    if (is_array($recipeData) && isset($recipeData['uid'])) {
+                        $syncedUuids[] = $recipeData['uid'];
                         $this->updateOrCreateRecipe($recipeData);
                     }
+                }
+
+                // Delete recipes that were permanently removed from Paprika
+                if (! empty($syncedUuids)) {
+                    Recipe::whereNotIn('uuid', $syncedUuids)->delete();
                 }
             }
         }
@@ -368,7 +375,17 @@ class PaprikaSyncService
                 }
             }
         } else {
-            // Already up to date, skip detail fetch
+            // Already up to date, but we might still need to check if we just pulled it from cache
+            // Since we don't have the full data, we'll just return and keep the existing record
+            return;
+        }
+
+        // If the recipe is marked as in the trash, delete it locally
+        if (! empty($data['in_trash']) || ! empty($data['trash'])) {
+            if ($existing) {
+                $existing->delete();
+            }
+
             return;
         }
 

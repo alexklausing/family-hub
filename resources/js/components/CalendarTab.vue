@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import draggable from 'vuedraggable'
 import axios from 'axios'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -39,6 +40,7 @@ import {
     Pencil,
     RefreshCw,
     Star,
+    GripVertical,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -80,6 +82,7 @@ const emit = defineEmits([
     'range-changed',
     'update:activeProfile',
     'update:defaultCalendar',
+    'reorder-calendars',
     'toggle-calendar',
 ])
 
@@ -153,7 +156,10 @@ const sortedSchedule = computed(() => {
         .filter((e) => {
             const start = getEventDate(e)
             const end = getEventDate(e, true)
-            return end >= now || (e.all_day && start.toDateString() === now.toDateString())
+            return (
+                end >= now ||
+                (e.all_day && start.toDateString() === now.toDateString())
+            )
         })
         .sort((a, b) => getEventDate(a) - getEventDate(b))
         .slice(0, 50)
@@ -179,8 +185,18 @@ const isSavingEvent = ref(false)
 const eventError = ref('')
 
 const writableCalendars = computed(() => {
-    return props.availableCalendars.filter(c => c.provider === 'apple')
+    return props.availableCalendars.filter((c) => c.provider === 'apple')
 })
+
+const localCalendars = ref([...props.availableCalendars])
+
+watch(
+    () => props.availableCalendars,
+    (newVals) => {
+        localCalendars.value = [...newVals]
+    },
+    { deep: true },
+)
 
 // Calendar Configuration
 const calendarOptions = ref({
@@ -227,6 +243,7 @@ const calendarOptions = ref({
     selectable: true,
     selectMirror: true,
     editable: false,
+    eventOrder: 'start,-duration,allDay,calendarOrder,title',
 
     eventContent: (arg) => {
         const timeText = arg.timeText
@@ -262,7 +279,7 @@ watch(
     () => props.localTimezone,
     (newTz) => {
         calendarOptions.value.timeZone = newTz
-    }
+    },
 )
 
 watch(isSidebarOpen, () => {
@@ -281,23 +298,30 @@ watch(isSidebarOpen, () => {
 })
 
 watch(
-    () => props.events,
-    (newEvents) => {
-        calendarOptions.value.events = newEvents.map((event) => ({
-            id: String(event.id),
-            title: event.title,
-            start: event.start,
-            end: event.end,
-            allDay: event.all_day,
-            backgroundColor: event.calendar?.color || '#3b82f6',
-            borderColor: event.calendar?.color || '#3b82f6',
-            extendedProps: {
-                provider: event.calendar?.provider,
-                calendarName: event.calendar?.name,
-            },
-        }))
+    () => [props.events, props.availableCalendars],
+    ([newEvents, newCalendars]) => {
+        calendarOptions.value.events = newEvents.map((event) => {
+            const orderIdx = newCalendars.findIndex(
+                (c) => c.id == event.calendar_id,
+            )
+            return {
+                id: String(event.id),
+                title: event.title,
+                start: event.start,
+                end: event.end,
+                allDay: event.all_day,
+                calendarOrder: orderIdx === -1 ? 999 : orderIdx,
+                backgroundColor: event.calendar?.color || '#3b82f6',
+                borderColor: event.calendar?.color || '#3b82f6',
+                extendedProps: {
+                    provider: event.calendar?.provider,
+                    calendarName: event.calendar?.name,
+                    calendar_id: event.calendar_id,
+                },
+            }
+        })
     },
-    { immediate: true },
+    { immediate: true, deep: true },
 )
 
 const fullCalendar = ref(null)
@@ -320,29 +344,29 @@ function handleDatesSet(info) {
 
 function parseLocalParts(isoString) {
     if (!isoString) return { date: '', time: '12:00' }
-    
+
     // If it's just a date string from FullCalendar (e.g. "2026-06-19")
     if (isoString.length === 10) {
         return { date: isoString, time: '12:00' }
     }
-    
+
     const date = new Date(isoString)
     if (isNaN(date.getTime())) return { date: '', time: '12:00' }
-    
+
     const offset = date.getTimezoneOffset()
-    const localDate = new Date(date.getTime() - (offset * 60 * 1000))
+    const localDate = new Date(date.getTime() - offset * 60 * 1000)
     const iso = localDate.toISOString() // "2026-06-19T23:00:00.000Z"
-    
+
     return {
         date: iso.slice(0, 10),
-        time: iso.slice(11, 16)
+        time: iso.slice(11, 16),
     }
 }
 
 function handleDateSelect(selectInfo) {
     modalMode.value = 'create'
     const startParts = parseLocalParts(selectInfo.startStr)
-    
+
     let endStrToParse = selectInfo.endStr
     if (selectInfo.allDay && endStrToParse && endStrToParse.length === 10) {
         const parts = endStrToParse.split('-')
@@ -354,17 +378,22 @@ function handleDateSelect(selectInfo) {
         endStrToParse = `${y}-${m}-${day}`
     }
     const endParts = parseLocalParts(endStrToParse)
-    
+
     // Determine default calendar
-    let initialCalendarId = null;
+    let initialCalendarId = null
     if (writableCalendars.value.length > 0) {
-        if (props.defaultCalendarId && writableCalendars.value.some(c => c.id === props.defaultCalendarId)) {
-            initialCalendarId = props.defaultCalendarId;
+        if (
+            props.defaultCalendarId &&
+            writableCalendars.value.some(
+                (c) => c.id === props.defaultCalendarId,
+            )
+        ) {
+            initialCalendarId = props.defaultCalendarId
         } else {
-            initialCalendarId = writableCalendars.value[0].id;
+            initialCalendarId = writableCalendars.value[0].id
         }
     }
-    
+
     selectedEvent.value = {
         id: null,
         calendar_id: initialCalendarId,
@@ -385,10 +414,10 @@ function handleEventClick(clickInfo) {
     modalMode.value = 'edit'
     const startParts = parseLocalParts(clickInfo.event.startStr)
     const endParts = parseLocalParts(clickInfo.event.endStr)
-    
+
     const provider = clickInfo.event.extendedProps.provider || 'ical'
     const isReadOnly = provider === 'ical'
-    
+
     selectedEvent.value = {
         id: clickInfo.event.id,
         calendar_id: clickInfo.event.extendedProps.calendar_id || null,
@@ -410,28 +439,31 @@ async function saveEvent() {
         eventError.value = 'Title and Calendar are required.'
         return
     }
-    
+
     isSavingEvent.value = true
     eventError.value = ''
-    
+
     try {
-        const startString = selectedEvent.value.allDay 
-            ? selectedEvent.value.startDate 
+        const startString = selectedEvent.value.allDay
+            ? selectedEvent.value.startDate
             : `${selectedEvent.value.startDate}T${selectedEvent.value.startTime}:00`
-            
-        const endString = selectedEvent.value.allDay 
-            ? selectedEvent.value.endDate 
+
+        const endString = selectedEvent.value.allDay
+            ? selectedEvent.value.endDate
             : `${selectedEvent.value.endDate}T${selectedEvent.value.endTime}:00`
 
         if (modalMode.value === 'create') {
-            await axios.post(`/api/calendars/${selectedEvent.value.calendar_id}/events`, {
-                title: selectedEvent.value.title,
-                description: selectedEvent.value.description,
-                start: startString,
-                end: endString,
-                all_day: selectedEvent.value.allDay,
-                timezone: props.localTimezone
-            })
+            await axios.post(
+                `/api/calendars/${selectedEvent.value.calendar_id}/events`,
+                {
+                    title: selectedEvent.value.title,
+                    description: selectedEvent.value.description,
+                    start: startString,
+                    end: endString,
+                    all_day: selectedEvent.value.allDay,
+                    timezone: props.localTimezone,
+                },
+            )
         } else {
             // Edit not fully implemented for CalDAV yet, just show error or close
             console.log('Edit not implemented yet')
@@ -443,7 +475,8 @@ async function saveEvent() {
             end: fullCalendar.value.getApi().view.activeEnd.toISOString(),
         })
     } catch (error) {
-        eventError.value = error.response?.data?.error || 'Failed to save event.'
+        eventError.value =
+            error.response?.data?.error || 'Failed to save event.'
     } finally {
         isSavingEvent.value = false
     }
@@ -453,9 +486,12 @@ const isSettingDefault = ref(false)
 const setDefaultCalendar = async (calendarId) => {
     isSettingDefault.value = true
     try {
-        const response = await axios.post(`/api/profiles/${props.activeProfile}/default-calendar`, {
-            calendar_id: calendarId
-        })
+        const response = await axios.post(
+            `/api/profiles/${props.activeProfile}/default-calendar`,
+            {
+                calendar_id: calendarId,
+            },
+        )
         emit('update:defaultCalendar', response.data.default_calendar_id)
     } catch (error) {
         console.error('Failed to set default calendar:', error)
@@ -491,13 +527,16 @@ const fetchAppleCalendars = async () => {
         })
         availableAppleCalendars.value = response.data.calendars
         if (availableAppleCalendars.value.length > 0) {
-            importForm.value.apple_calendar_path = availableAppleCalendars.value[0].path
+            importForm.value.apple_calendar_path =
+                availableAppleCalendars.value[0].path
             if (!importForm.value.name) {
                 importForm.value.name = availableAppleCalendars.value[0].name
             }
         }
     } catch (error) {
-        importError.value = error.response?.data?.errors?.password?.[0] || 'Failed to fetch calendars.'
+        importError.value =
+            error.response?.data?.errors?.password?.[0] ||
+            'Failed to fetch calendars.'
     } finally {
         isFetchingAppleCalendars.value = false
     }
@@ -509,10 +548,17 @@ const openEditModal = (calendar) => {
     importForm.value = {
         provider: calendar.provider,
         name: calendar.name,
-        url: calendar.provider === 'ical' ? calendar.credentials?.url || '' : '',
-        email: calendar.provider === 'apple' ? calendar.credentials?.email || '' : '',
+        url:
+            calendar.provider === 'ical' ? calendar.credentials?.url || '' : '',
+        email:
+            calendar.provider === 'apple'
+                ? calendar.credentials?.email || ''
+                : '',
         password: '', // Left blank so user doesn't see password on edit
-        apple_calendar_path: calendar.provider === 'apple' ? calendar.credentials?.path || '' : '',
+        apple_calendar_path:
+            calendar.provider === 'apple'
+                ? calendar.credentials?.path || ''
+                : '',
         color: calendar.color || getRandomColor(),
     }
     availableAppleCalendars.value = []
@@ -542,7 +588,10 @@ const submitImportCalendar = async () => {
         }
 
         if (importModalMode.value === 'edit') {
-            await axios.put(`/api/calendars/${editingCalendarId.value}`, payload)
+            await axios.put(
+                `/api/calendars/${editingCalendarId.value}`,
+                payload,
+            )
         } else {
             await axios.post('/api/calendars', payload)
         }
@@ -799,10 +848,10 @@ onUnmounted(() => {
         </div>
 
         <!-- Main Content Row -->
-        <div class="flex min-h-0 flex-1 w-full">
+        <div class="flex min-h-0 w-full flex-1">
             <!-- Calendar Area -->
             <Card
-                class="flex-1 min-w-0 w-full overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-none backdrop-blur-3xl dark:bg-white/5"
+                class="w-full min-w-0 flex-1 overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-none backdrop-blur-3xl dark:bg-white/5"
             >
                 <CardContent class="h-full p-6">
                     <FullCalendar
@@ -815,8 +864,12 @@ onUnmounted(() => {
 
             <!-- Collapsible Up Next Sidebar -->
             <div
-                class="transition-all duration-500 ease-in-out overflow-hidden flex shrink-0"
-                :class="isSidebarOpen ? 'w-80 ml-6 opacity-100' : 'w-0 ml-0 opacity-0'"
+                class="flex shrink-0 overflow-hidden transition-all duration-500 ease-in-out"
+                :class="
+                    isSidebarOpen
+                        ? 'ml-6 w-80 opacity-100'
+                        : 'ml-0 w-0 opacity-0'
+                "
             >
                 <div class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
                     <Card
@@ -862,13 +915,17 @@ onUnmounted(() => {
                                             >
                                                 <span
                                                     v-if="
-                                                        getEventDate(event).toDateString() ===
+                                                        getEventDate(
+                                                            event,
+                                                        ).toDateString() ===
                                                         new Date().toDateString()
                                                     "
                                                     >Today</span
                                                 >
                                                 <span v-else>{{
-                                                    getEventDate(event).toLocaleDateString([], {
+                                                    getEventDate(
+                                                        event,
+                                                    ).toLocaleDateString([], {
                                                         month: 'short',
                                                         day: 'numeric',
                                                     })
@@ -876,7 +933,9 @@ onUnmounted(() => {
                                                 <span v-if="!event.all_day">
                                                     •
                                                     {{
-                                                        getEventDate(event).toLocaleTimeString(
+                                                        getEventDate(
+                                                            event,
+                                                        ).toLocaleTimeString(
                                                             [],
                                                             {
                                                                 hour: '2-digit',
@@ -912,7 +971,13 @@ onUnmounted(() => {
             >
                 <DialogHeader>
                     <DialogTitle class="text-2xl font-black uppercase italic">
-                        {{ modalMode === 'create' ? 'Add New Event' : (selectedEvent.isReadOnly ? 'Event Details' : 'Edit Event') }}
+                        {{
+                            modalMode === 'create'
+                                ? 'Add New Event'
+                                : selectedEvent.isReadOnly
+                                  ? 'Event Details'
+                                  : 'Edit Event'
+                        }}
                     </DialogTitle>
                     <DialogDescription
                         class="text-[10px] font-bold tracking-widest uppercase italic opacity-60"
@@ -920,7 +985,9 @@ onUnmounted(() => {
                         {{
                             modalMode === 'create'
                                 ? 'Enter the details for your new event.'
-                                : (selectedEvent.isReadOnly ? 'View the details of this event.' : 'Modify the details of this event.')
+                                : selectedEvent.isReadOnly
+                                  ? 'View the details of this event.'
+                                  : 'Modify the details of this event.'
                         }}
                     </DialogDescription>
                 </DialogHeader>
@@ -936,58 +1003,82 @@ onUnmounted(() => {
                             id="title"
                             v-model="selectedEvent.title"
                             :disabled="selectedEvent.isReadOnly"
-                            class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 text-lg font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Dinner, Soccer, etc."
                         />
                     </div>
-                    
+
                     <div class="flex items-center gap-4">
-                        <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">All Day</Label>
-                        <Switch v-model:checked="selectedEvent.allDay" :disabled="selectedEvent.isReadOnly" />
+                        <Label
+                            class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                            >All Day</Label
+                        >
+                        <Switch
+                            v-model:checked="selectedEvent.allDay"
+                            :disabled="selectedEvent.isReadOnly"
+                        />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-2">
-                            <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">Start Date</Label>
+                            <Label
+                                class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                                >Start Date</Label
+                            >
                             <Input
                                 type="date"
                                 v-model="selectedEvent.startDate"
                                 :disabled="selectedEvent.isReadOnly"
-                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
-                        <div class="flex flex-col gap-2" v-if="!selectedEvent.allDay">
-                            <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">Start Time</Label>
+                        <div
+                            class="flex flex-col gap-2"
+                            v-if="!selectedEvent.allDay"
+                        >
+                            <Label
+                                class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                                >Start Time</Label
+                            >
                             <Input
                                 type="time"
                                 v-model="selectedEvent.startTime"
                                 :disabled="selectedEvent.isReadOnly"
-                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
                     </div>
-                    
+
                     <div class="grid grid-cols-2 gap-4">
                         <div class="flex flex-col gap-2">
-                            <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">End Date</Label>
+                            <Label
+                                class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                                >End Date</Label
+                            >
                             <Input
                                 type="date"
                                 v-model="selectedEvent.endDate"
                                 :disabled="selectedEvent.isReadOnly"
-                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
-                        <div class="flex flex-col gap-2" v-if="!selectedEvent.allDay">
-                            <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">End Time</Label>
+                        <div
+                            class="flex flex-col gap-2"
+                            v-if="!selectedEvent.allDay"
+                        >
+                            <Label
+                                class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                                >End Time</Label
+                            >
                             <Input
                                 type="time"
                                 v-model="selectedEvent.endTime"
                                 :disabled="selectedEvent.isReadOnly"
-                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
                     </div>
-                    
+
                     <div class="flex flex-col gap-2">
                         <Label
                             for="description"
@@ -998,34 +1089,48 @@ onUnmounted(() => {
                             id="description"
                             v-model="selectedEvent.description"
                             :disabled="selectedEvent.isReadOnly"
-                            class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="Any extra details..."
                         />
                     </div>
-                    
-                    <div class="flex flex-col gap-2" v-if="modalMode === 'create'">
+
+                    <div
+                        class="flex flex-col gap-2"
+                        v-if="modalMode === 'create'"
+                    >
                         <Label
                             class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
                             >Calendar</Label
                         >
                         <template v-if="writableCalendars.length > 0">
-                            <select 
+                            <select
                                 v-model="selectedEvent.calendar_id"
                                 class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold outline-none"
                             >
-                                <option v-for="cal in writableCalendars" :key="cal.id" :value="cal.id">
+                                <option
+                                    v-for="cal in writableCalendars"
+                                    :key="cal.id"
+                                    :value="cal.id"
+                                >
                                     {{ cal.name }}
                                 </option>
                             </select>
                         </template>
                         <template v-else>
-                            <div class="bg-red-500/10 text-red-500 p-4 rounded-2xl text-sm font-bold">
-                                You don't have any authenticated calendars (like Apple iCloud) connected yet. iCal feeds are read-only.
+                            <div
+                                class="rounded-2xl bg-red-500/10 p-4 text-sm font-bold text-red-500"
+                            >
+                                You don't have any authenticated calendars (like
+                                Apple iCloud) connected yet. iCal feeds are
+                                read-only.
                             </div>
                         </template>
                     </div>
 
-                    <div v-if="eventError" class="bg-red-500/10 text-red-500 p-4 rounded-2xl text-sm font-bold">
+                    <div
+                        v-if="eventError"
+                        class="rounded-2xl bg-red-500/10 p-4 text-sm font-bold text-red-500"
+                    >
                         {{ eventError }}
                     </div>
                 </div>
@@ -1041,10 +1146,18 @@ onUnmounted(() => {
                         v-if="!selectedEvent.isReadOnly"
                         type="submit"
                         @click="saveEvent"
-                        :disabled="isSavingEvent || !selectedEvent.title || (modalMode === 'create' && !selectedEvent.calendar_id)"
+                        :disabled="
+                            isSavingEvent ||
+                            !selectedEvent.title ||
+                            (modalMode === 'create' &&
+                                !selectedEvent.calendar_id)
+                        "
                         class="h-14 rounded-2xl px-8 text-xs font-black tracking-widest uppercase shadow-none"
-                        >
-                        <Loader2 v-if="isSavingEvent" class="mr-2 h-4 w-4 animate-spin" />
+                    >
+                        <Loader2
+                            v-if="isSavingEvent"
+                            class="mr-2 h-4 w-4 animate-spin"
+                        />
                         Save Event
                     </Button>
                 </DialogFooter>
@@ -1078,81 +1191,118 @@ onUnmounted(() => {
                 </DialogHeader>
 
                 <div
-                    class="custom-scrollbar max-h-[400px] space-y-4 overflow-y-auto pr-2"
+                    class="custom-scrollbar max-h-[400px] overflow-y-auto pr-2"
                 >
-                    <div
-                        v-for="calendar in availableCalendars"
-                        :key="calendar.id"
-                        class="flex items-center justify-between rounded-[2rem] border border-white/5 bg-white/40 p-6 shadow-sm transition-all dark:bg-white/5"
+                    <draggable
+                        v-model="localCalendars"
+                        item-key="id"
+                        handle=".drag-handle"
+                        :animation="200"
+                        class="flex flex-col gap-4"
+                        @change="emit('reorder-calendars', localCalendars)"
                     >
-                        <div class="flex items-center gap-5">
+                        <template #item="{ element: calendar }">
                             <div
-                                class="h-4 w-4 rounded-full shadow-lg"
-                                :style="{ backgroundColor: calendar.color }"
-                            ></div>
-                            <div>
-                                <h4 class="text-xl font-black tracking-tight">
-                                    {{ calendar.name }}
-                                </h4>
-                                <p
-                                    class="text-[10px] font-bold tracking-widest uppercase italic opacity-40 mt-1 flex items-center gap-1"
-                                >
-                                    <template v-if="calendar.provider === 'apple'">
-                                        <RefreshCw class="h-3 w-3" /> Two-Way Sync (Apple)
-                                    </template>
-                                    <template v-else>
-                                        <CalendarIcon class="h-3 w-3" /> Read-Only Feed (iCal)
-                                    </template>
-                                </p>
+                                class="flex items-center justify-between rounded-[2rem] border border-white/5 bg-white/40 p-6 shadow-sm transition-all dark:bg-white/5"
+                            >
+                                <div class="flex items-center gap-5">
+                                    <GripVertical
+                                        class="drag-handle text-muted-foreground h-5 w-5 cursor-grab opacity-50 hover:opacity-100"
+                                    />
+                                    <div
+                                        class="h-4 w-4 rounded-full shadow-lg"
+                                        :style="{
+                                            backgroundColor: calendar.color,
+                                        }"
+                                    ></div>
+                                    <div>
+                                        <h4
+                                            class="text-xl font-black tracking-tight"
+                                        >
+                                            {{ calendar.name }}
+                                        </h4>
+                                        <p
+                                            class="mt-1 flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase italic opacity-40"
+                                        >
+                                            <template
+                                                v-if="
+                                                    calendar.provider ===
+                                                    'apple'
+                                                "
+                                            >
+                                                <RefreshCw class="h-3 w-3" />
+                                                Two-Way Sync (Apple)
+                                            </template>
+                                            <template v-else>
+                                                <CalendarIcon class="h-3 w-3" />
+                                                Read-Only Feed (iCal)
+                                            </template>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <Switch
+                                        :checked="
+                                            visibleCalendarIds.includes(
+                                                calendar.id,
+                                            )
+                                        "
+                                        @update:checked="
+                                            emit('toggle-calendar', calendar.id)
+                                        "
+                                        class="scale-150"
+                                    />
+                                    <Button
+                                        v-if="calendar.provider === 'apple'"
+                                        variant="ghost"
+                                        size="icon"
+                                        :class="[
+                                            'h-10 w-10 rounded-full transition-colors',
+                                            defaultCalendarId === calendar.id
+                                                ? 'text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-600'
+                                                : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10',
+                                        ]"
+                                        @click="setDefaultCalendar(calendar.id)"
+                                        :disabled="isSettingDefault"
+                                    >
+                                        <Loader2
+                                            v-if="
+                                                isSettingDefault &&
+                                                defaultCalendarId !==
+                                                    calendar.id
+                                            "
+                                            class="h-4 w-4 animate-spin"
+                                        />
+                                        <Star
+                                            v-else
+                                            class="h-4 w-4"
+                                            :class="{
+                                                'fill-current':
+                                                    defaultCalendarId ===
+                                                    calendar.id,
+                                            }"
+                                        />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="h-10 w-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+                                        @click="openEditModal(calendar)"
+                                    >
+                                        <Pencil class="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="h-10 w-10 rounded-full text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                                        @click="deleteCalendar(calendar.id)"
+                                    >
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <Switch
-                                :checked="
-                                    visibleCalendarIds.includes(calendar.id)
-                                "
-                                @update:checked="
-                                    emit('toggle-calendar', calendar.id)
-                                "
-                                class="scale-150"
-                            />
-                            <Button
-                                v-if="calendar.provider === 'apple'"
-                                variant="ghost"
-                                size="icon"
-                                :class="[
-                                    'h-10 w-10 rounded-full transition-colors',
-                                    defaultCalendarId === calendar.id 
-                                        ? 'text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-600' 
-                                        : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10'
-                                ]"
-                                @click="setDefaultCalendar(calendar.id)"
-                                :disabled="isSettingDefault"
-                            >
-                                <Loader2 v-if="isSettingDefault && defaultCalendarId !== calendar.id" class="h-4 w-4 animate-spin" />
-                                <Star v-else class="h-4 w-4" :class="{ 'fill-current': defaultCalendarId === calendar.id }" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="h-10 w-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
-                                @click="openEditModal(calendar)"
-                            >
-                                <Pencil class="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                class="h-10 w-10 rounded-full text-red-500 hover:bg-red-500/10 hover:text-red-600"
-                                @click="deleteCalendar(calendar.id)"
-                            >
-                                <Trash2 class="h-5 w-5" />
-                            </Button>
-                        </div>
-                    </div>
+                        </template>
+                    </draggable>
                 </div>
-
-            
 
                 <div class="mt-6 flex gap-4">
                     <Button
@@ -1195,8 +1345,14 @@ onUnmounted(() => {
                 </DialogHeader>
 
                 <div class="grid gap-6 py-6">
-                    <div class="flex flex-col gap-4" v-if="importModalMode === 'create'">
-                        <Label class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40">Integration Type</Label>
+                    <div
+                        class="flex flex-col gap-4"
+                        v-if="importModalMode === 'create'"
+                    >
+                        <Label
+                            class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
+                            >Integration Type</Label
+                        >
                         <div class="grid grid-cols-2 gap-4">
                             <button
                                 @click.prevent="importForm.provider = 'ical'"
@@ -1204,13 +1360,23 @@ onUnmounted(() => {
                                     'flex flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all',
                                     importForm.provider === 'ical'
                                         ? 'border-primary bg-primary/10 scale-[1.02]'
-                                        : 'border-primary/5 bg-primary/5 opacity-60 hover:opacity-100 hover:scale-[1.01]'
+                                        : 'border-primary/5 bg-primary/5 opacity-60 hover:scale-[1.01] hover:opacity-100',
                                 ]"
                             >
-                                <div class="bg-primary/20 rounded-full p-3"><CalendarIcon class="h-6 w-6 text-primary" /></div>
+                                <div class="bg-primary/20 rounded-full p-3">
+                                    <CalendarIcon
+                                        class="text-primary h-6 w-6"
+                                    />
+                                </div>
                                 <div>
-                                    <h5 class="font-bold tracking-tight">Read-Only Feed</h5>
-                                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">iCal / WebCal URL</p>
+                                    <h5 class="font-bold tracking-tight">
+                                        Read-Only Feed
+                                    </h5>
+                                    <p
+                                        class="mt-1 text-[10px] font-bold tracking-widest uppercase opacity-60"
+                                    >
+                                        iCal / WebCal URL
+                                    </p>
                                 </div>
                             </button>
                             <button
@@ -1219,18 +1385,33 @@ onUnmounted(() => {
                                     'flex flex-col items-center justify-center gap-3 rounded-2xl border-2 p-4 text-center transition-all',
                                     importForm.provider === 'apple'
                                         ? 'border-primary bg-primary/10 scale-[1.02]'
-                                        : 'border-primary/5 bg-primary/5 opacity-60 hover:opacity-100 hover:scale-[1.01]'
+                                        : 'border-primary/5 bg-primary/5 opacity-60 hover:scale-[1.01] hover:opacity-100',
                                 ]"
                             >
-                                <div class="bg-primary/20 rounded-full p-3"><RefreshCw class="h-6 w-6 text-primary" /></div>
+                                <div class="bg-primary/20 rounded-full p-3">
+                                    <RefreshCw class="text-primary h-6 w-6" />
+                                </div>
                                 <div>
-                                    <h5 class="font-bold tracking-tight">Two-Way Sync</h5>
-                                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-1">Apple iCloud</p>
+                                    <h5 class="font-bold tracking-tight">
+                                        Two-Way Sync
+                                    </h5>
+                                    <p
+                                        class="mt-1 text-[10px] font-bold tracking-widest uppercase opacity-60"
+                                    >
+                                        Apple iCloud
+                                    </p>
                                 </div>
                             </button>
                         </div>
                     </div>
-                    <div class="flex flex-col gap-2" v-if="importForm.provider === 'ical' || availableAppleCalendars.length > 0 || importModalMode === 'edit'">
+                    <div
+                        class="flex flex-col gap-2"
+                        v-if="
+                            importForm.provider === 'ical' ||
+                            availableAppleCalendars.length > 0 ||
+                            importModalMode === 'edit'
+                        "
+                    >
                         <Label
                             for="importName"
                             class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
@@ -1244,7 +1425,10 @@ onUnmounted(() => {
                         />
                     </div>
 
-                    <div v-if="importForm.provider === 'ical'" class="flex flex-col gap-2">
+                    <div
+                        v-if="importForm.provider === 'ical'"
+                        class="flex flex-col gap-2"
+                    >
                         <Label
                             for="importUrl"
                             class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
@@ -1258,8 +1442,16 @@ onUnmounted(() => {
                         />
                     </div>
 
-                    <div v-if="importForm.provider === 'apple'" class="flex flex-col gap-4">
-                        <template v-if="availableAppleCalendars.length === 0 && importModalMode === 'create'">
+                    <div
+                        v-if="importForm.provider === 'apple'"
+                        class="flex flex-col gap-4"
+                    >
+                        <template
+                            v-if="
+                                availableAppleCalendars.length === 0 &&
+                                importModalMode === 'create'
+                            "
+                        >
                             <div class="flex flex-col gap-2">
                                 <Label
                                     for="importEmail"
@@ -1287,31 +1479,66 @@ onUnmounted(() => {
                                     class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-mono text-lg font-bold tracking-widest"
                                     placeholder="abcd-efgh-ijkl-mnop"
                                 />
-                                <p class="px-1 text-[10px] font-bold text-muted-foreground">
-                                    You must use an App-Specific Password, not your standard iCloud password. 
-                                    <a href="https://support.apple.com/en-us/102654" target="_blank" class="underline text-blue-500">Learn how to generate one</a>.
+                                <p
+                                    class="text-muted-foreground px-1 text-[10px] font-bold"
+                                >
+                                    You must use an App-Specific Password, not
+                                    your standard iCloud password.
+                                    <a
+                                        href="https://support.apple.com/en-us/102654"
+                                        target="_blank"
+                                        class="text-blue-500 underline"
+                                        >Learn how to generate one</a
+                                    >.
                                 </p>
                             </div>
-                            <Button @click.prevent="fetchAppleCalendars" :disabled="isFetchingAppleCalendars || !importForm.email || !importForm.password" class="h-14 rounded-2xl text-xs font-black tracking-widest uppercase">
-                                {{ isFetchingAppleCalendars ? 'Connecting...' : 'Fetch Calendars' }}
+                            <Button
+                                @click.prevent="fetchAppleCalendars"
+                                :disabled="
+                                    isFetchingAppleCalendars ||
+                                    !importForm.email ||
+                                    !importForm.password
+                                "
+                                class="h-14 rounded-2xl text-xs font-black tracking-widest uppercase"
+                            >
+                                {{
+                                    isFetchingAppleCalendars
+                                        ? 'Connecting...'
+                                        : 'Fetch Calendars'
+                                }}
                             </Button>
                         </template>
 
-                        <template v-else-if="availableAppleCalendars.length > 0">
+                        <template
+                            v-else-if="availableAppleCalendars.length > 0"
+                        >
                             <div class="flex flex-col gap-2">
                                 <Label
                                     class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
                                     >Select iCloud Calendar</Label
                                 >
-                                <select 
+                                <select
                                     v-model="importForm.apple_calendar_path"
-                                    @change="() => {
-                                        const cal = availableAppleCalendars.find(c => c.path === importForm.apple_calendar_path);
-                                        if (cal) importForm.name = cal.name;
-                                    }"
+                                    @change="
+                                        () => {
+                                            const cal =
+                                                availableAppleCalendars.find(
+                                                    (c) =>
+                                                        c.path ===
+                                                        importForm.apple_calendar_path,
+                                                )
+                                            if (cal) importForm.name = cal.name
+                                        }
+                                    "
                                     class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-bold outline-none"
                                 >
-                                    <option v-for="cal in availableAppleCalendars" :key="cal.path" :value="cal.path">{{ cal.name }}</option>
+                                    <option
+                                        v-for="cal in availableAppleCalendars"
+                                        :key="cal.path"
+                                        :value="cal.path"
+                                    >
+                                        {{ cal.name }}
+                                    </option>
                                 </select>
                             </div>
                         </template>
@@ -1335,7 +1562,8 @@ onUnmounted(() => {
                                 <Label
                                     for="importPassword"
                                     class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
-                                    >App-Specific Password (leave blank to keep current)</Label
+                                    >App-Specific Password (leave blank to keep
+                                    current)</Label
                                 >
                                 <Input
                                     id="importPassword"
@@ -1352,14 +1580,21 @@ onUnmounted(() => {
                                 >
                                 <Input
                                     v-model="importForm.apple_calendar_path"
-                                    class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 text-sm font-mono opacity-50"
+                                    class="border-primary/5 bg-primary/5 h-14 rounded-2xl border-2 px-6 font-mono text-sm opacity-50"
                                     readonly
                                 />
                             </div>
                         </template>
                     </div>
 
-                    <div class="flex flex-col gap-2" v-if="importForm.provider === 'ical' || availableAppleCalendars.length > 0 || importModalMode === 'edit'">
+                    <div
+                        class="flex flex-col gap-2"
+                        v-if="
+                            importForm.provider === 'ical' ||
+                            availableAppleCalendars.length > 0 ||
+                            importModalMode === 'edit'
+                        "
+                    >
                         <Label
                             class="px-1 text-[10px] font-black tracking-widest uppercase opacity-40"
                             >Color</Label
@@ -1409,12 +1644,23 @@ onUnmounted(() => {
                         @click="submitImportCalendar"
                         :disabled="
                             isImporting ||
-                            (importForm.provider === 'apple' && availableAppleCalendars.length === 0 && importModalMode === 'create') ||
+                            (importForm.provider === 'apple' &&
+                                availableAppleCalendars.length === 0 &&
+                                importModalMode === 'create') ||
                             !importForm.name ||
-                            (importForm.provider === 'ical' && !importForm.url) ||
-                            (importForm.provider === 'apple' && (!importForm.email || (!importForm.password && importModalMode === 'create') || !importForm.apple_calendar_path))
+                            (importForm.provider === 'ical' &&
+                                !importForm.url) ||
+                            (importForm.provider === 'apple' &&
+                                (!importForm.email ||
+                                    (!importForm.password &&
+                                        importModalMode === 'create') ||
+                                    !importForm.apple_calendar_path))
                         "
-                        v-if="importForm.provider === 'ical' || availableAppleCalendars.length > 0 || importModalMode === 'edit'"
+                        v-if="
+                            importForm.provider === 'ical' ||
+                            availableAppleCalendars.length > 0 ||
+                            importModalMode === 'edit'
+                        "
                         class="h-14 rounded-2xl px-8 text-xs font-black tracking-widest uppercase shadow-none"
                     >
                         <Loader2

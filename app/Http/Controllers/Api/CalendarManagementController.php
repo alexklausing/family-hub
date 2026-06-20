@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Calendar;
 use App\Models\Profile;
 use App\Models\Tab;
+use App\Services\Calendar\AppleCalendarService;
 use App\Services\Calendar\CalendarManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
-
-use App\Services\Calendar\AppleCalendarService;
 
 class CalendarManagementController extends Controller
 {
@@ -24,7 +23,7 @@ class CalendarManagementController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (!$this->appleService->testConnection($validated['email'], $validated['password'])) {
+        if (! $this->appleService->testConnection($validated['email'], $validated['password'])) {
             throw ValidationException::withMessages([
                 'password' => 'Failed to connect to iCloud. Please ensure you are using an App-Specific Password.',
             ]);
@@ -79,7 +78,7 @@ class CalendarManagementController extends Controller
                 ]);
             }
         } elseif ($validated['provider'] === 'apple') {
-            if (!$this->appleService->testConnection($validated['email'], $validated['password'])) {
+            if (! $this->appleService->testConnection($validated['email'], $validated['password'])) {
                 throw ValidationException::withMessages([
                     'password' => 'Failed to connect to iCloud. Please ensure you are using an App-Specific Password.',
                 ]);
@@ -134,7 +133,7 @@ class CalendarManagementController extends Controller
         } elseif ($validated['provider'] === 'apple') {
             $credentials['email'] = $validated['email'];
             $credentials['path'] = $validated['apple_calendar_path'];
-            if (!empty($validated['password'])) {
+            if (! empty($validated['password'])) {
                 $credentials['password'] = $validated['password'];
             }
         }
@@ -168,19 +167,19 @@ class CalendarManagementController extends Controller
             'calendar_id' => 'required|exists:calendars,id',
         ]);
 
-        $profile = \App\Models\Profile::where('name', 'ILIKE', trim($profileName))->first();
+        $profile = Profile::where('name', 'ILIKE', trim($profileName))->first();
 
-        if (!$profile) {
+        if (! $profile) {
             return response()->json(['error' => 'Profile not found'], 404);
         }
 
         $profile->update([
-            'default_calendar_id' => $validated['calendar_id']
+            'default_calendar_id' => $validated['calendar_id'],
         ]);
 
         return response()->json([
             'message' => 'Default calendar updated successfully.',
-            'default_calendar_id' => $profile->default_calendar_id
+            'default_calendar_id' => $profile->default_calendar_id,
         ]);
     }
 }

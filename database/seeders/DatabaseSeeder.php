@@ -85,7 +85,7 @@ class DatabaseSeeder extends Seeder
             ],
         ];
 
-        if (!empty(config('services.apple.email'))) {
+        if (! empty(config('services.apple.email'))) {
             $calendars[] = [
                 'provider' => 'apple',
                 'external_id' => 'apple_main',

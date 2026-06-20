@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\CalendarManagementController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
+use App\Http\Controllers\ChoreController;
+use App\Http\Controllers\LabelController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,3 +33,15 @@ Route::post('/api/shopping-list', [ShoppingListController::class, 'store']);
 Route::delete('/api/shopping-list', [ShoppingListController::class, 'destroyAll']);
 Route::post('/api/shopping-list/{item}/toggle', [ShoppingListController::class, 'toggle']);
 Route::post('/api/shopping-list/add-recipe', [ShoppingListController::class, 'addRecipe']);
+
+Route::get('/api/chores', [ChoreController::class, 'index']);
+Route::post('/api/chores', [ChoreController::class, 'store']);
+Route::put('/api/chores/{chore}', [ChoreController::class, 'update']);
+Route::delete('/api/chores/{chore}', [ChoreController::class, 'destroy']);
+Route::post('/api/chores/{chore}/toggle', [ChoreController::class, 'toggle']);
+Route::post('/api/chores/clone-group', [ChoreController::class, 'cloneGroup']);
+
+Route::get('/api/labels', [LabelController::class, 'index']);
+Route::post('/api/labels', [LabelController::class, 'store']);
+Route::put('/api/labels/{label}', [LabelController::class, 'update']);
+Route::delete('/api/labels/{label}', [LabelController::class, 'destroy']);

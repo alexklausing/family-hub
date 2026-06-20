@@ -25,6 +25,7 @@ import {
     Pause,
     Maximize2,
     Minimize2,
+    Moon,
 } from 'lucide-vue-next'
 import {
     Dialog,
@@ -279,12 +280,52 @@ const zoomOut = () => map?.zoomOut()
 const togglePlayback = () => (isPlaying.value = !isPlaying.value)
 
 const weatherIcon = (condition) => {
-    const code = condition?.toLowerCase() || ''
-    if (code.includes('rain')) return CloudRain
-    if (code.includes('cloud')) return Cloud
-    if (code.includes('clear')) return Sun
-    if (code.includes('storm')) return CloudLightning
-    return Sun
+    switch (condition?.toLowerCase()) {
+        case 'clear':
+            return Sun
+        case 'clouds':
+            return Cloud
+        case 'rain':
+        case 'drizzle':
+            return CloudRain
+        case 'thunderstorm':
+            return CloudLightning
+        case 'snow':
+            return CloudRain // Could add Snowflake icon
+        default:
+            return Sun
+    }
+}
+
+const getMoonPhase = (dayOrTimestamp) => {
+    if (!dayOrTimestamp) return { emoji: '🌑', label: 'New Moon' }
+
+    let phase
+    const dt =
+        typeof dayOrTimestamp === 'object' ? dayOrTimestamp.dt : dayOrTimestamp
+
+    if (
+        typeof dayOrTimestamp === 'object' &&
+        dayOrTimestamp.moon_phase !== undefined
+    ) {
+        phase = dayOrTimestamp.moon_phase
+    } else {
+        const newMoon = new Date('2000-01-06T18:14:00Z').getTime()
+        const diff = dt * 1000 - newMoon
+        const days = diff / (1000 * 60 * 60 * 24)
+        phase =
+            (((days % 29.53058868) + 29.53058868) % 29.53058868) / 29.53058868 // Handle negative diffs safely
+    }
+
+    if (phase < 0.0625) return { emoji: '🌑', label: 'New Moon' }
+    if (phase < 0.1875) return { emoji: '🌒', label: 'Waxing Crescent' }
+    if (phase < 0.3125) return { emoji: '🌓', label: 'First Quarter' }
+    if (phase < 0.4375) return { emoji: '🌔', label: 'Waxing Gibbous' }
+    if (phase < 0.5625) return { emoji: '🌕', label: 'Full Moon' }
+    if (phase < 0.6875) return { emoji: '🌖', label: 'Waning Gibbous' }
+    if (phase < 0.8125) return { emoji: '🌗', label: 'Last Quarter' }
+    if (phase < 0.9375) return { emoji: '🌘', label: 'Waning Crescent' }
+    return { emoji: '🌑', label: 'New Moon' }
 }
 
 // Formatting helpers
@@ -369,7 +410,7 @@ onMounted(() => {
                         />
                     </div>
 
-                    <div class="mt-8 grid grid-cols-3 gap-4">
+                    <div class="mt-8 grid grid-cols-4 gap-4">
                         <div class="flex flex-col items-center gap-1">
                             <Wind class="h-5 w-5 opacity-40" /><span
                                 class="text-sm font-black"
@@ -409,6 +450,23 @@ onMounted(() => {
                             <span
                                 class="text-[10px] font-bold uppercase opacity-30"
                                 >Feels</span
+                            >
+                        </div>
+                        <div class="flex flex-col items-center gap-1">
+                            <Moon class="h-5 w-5 opacity-40" />
+                            <span
+                                class="text-lg leading-none"
+                                :title="
+                                    getMoonPhase(weatherData?.current?.dt).label
+                                "
+                            >
+                                {{
+                                    getMoonPhase(weatherData?.current?.dt).emoji
+                                }}
+                            </span>
+                            <span
+                                class="text-[10px] font-bold uppercase opacity-30"
+                                >Moon</span
                             >
                         </div>
                     </div>
@@ -504,25 +562,6 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Top Status Bar (Top Left) -->
-                <div
-                    class="absolute top-6 left-6 z-[1000] flex items-center gap-3 rounded-2xl border border-white/10 bg-black/40 px-4 py-2 shadow-xl backdrop-blur-md"
-                >
-                    <div
-                        class="h-2 w-2 animate-pulse rounded-full bg-red-500"
-                    ></div>
-                    <span
-                        class="text-[10px] font-black tracking-widest text-white/80 uppercase"
-                        >NEXRAD N0Q</span
-                    >
-                    <div class="mx-1 h-3 w-[1px] bg-white/20"></div>
-                    <span
-                        class="text-[10px] font-black tracking-widest text-white uppercase"
-                        >Live Feed</span
-                    >
-                </div>
-
-                <!-- System Controls (Top Right) -->
                 <div
                     class="absolute top-6 right-6 z-[1000] flex flex-col gap-2"
                 >
@@ -655,8 +694,13 @@ onMounted(() => {
                                         :is="weatherIcon(day.weather[0]?.main)"
                                         class="text-primary h-8 w-8"
                                     /><span
-                                        class="text-sm font-bold capitalize opacity-60"
+                                        class="w-32 text-left text-sm font-bold capitalize opacity-60"
                                         >{{ day.weather[0]?.description }}</span
+                                    >
+                                    <span
+                                        class="text-xl opacity-80"
+                                        :title="getMoonPhase(day).label"
+                                        >{{ getMoonPhase(day).emoji }}</span
                                     >
                                 </div>
                                 <div class="flex w-32 justify-end gap-4">
