@@ -6,6 +6,7 @@ import { useIdle } from '@vueuse/core'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
     Dialog,
     DialogContent,
@@ -29,6 +30,9 @@ import {
     Check,
     ClipboardCopy,
     ChevronDown,
+    Wallet,
+    Inbox,
+    Clock,
 } from 'lucide-vue-next'
 
 const props = defineProps({ profiles: Array, activeProfile: String })
@@ -59,6 +63,7 @@ const blankChore = () => ({
     time: '',
     days: [0, 1, 2, 3, 4, 5, 6],
     reward: '',
+    is_bankable: true,
     label_id: null,
 })
 const newChore = ref(blankChore())
@@ -68,6 +73,7 @@ const rewardType = ref('monetary') // 'monetary' | 'text'
 const monetaryAmount = ref('') // e.g. "0.50"
 const textRewardValue = ref('') // selected/typed text reward
 const showRewardLibraryPicker = ref(false)
+const isRewardExpanded = ref(false)
 
 // Text Reward Library (localStorage)
 const REWARD_LIB_KEY = 'chore_reward_library'
@@ -128,8 +134,191 @@ watch([rewardType, monetaryAmount, textRewardValue], () => {
         const n = parseFloat(monetaryAmount.value)
         newChore.value.reward =
             monetaryAmount.value && !isNaN(n) ? `$${n.toFixed(2)}` : ''
+        newChore.value.is_bankable = true
     } else {
         newChore.value.reward = textRewardValue.value.trim()
+    }
+})
+
+// Time selector state & helpers
+const choreTimeHour = ref(null)
+const choreTimeMinute = ref('00')
+const choreTimePeriod = ref('AM')
+const minutesList = [
+    '00',
+    '05',
+    '10',
+    '15',
+    '20',
+    '25',
+    '30',
+    '35',
+    '40',
+    '45',
+    '50',
+    '55',
+]
+
+const computedMinutesList = computed(() => {
+    const list = [...minutesList]
+    if (choreTimeMinute.value && !list.includes(choreTimeMinute.value)) {
+        list.push(choreTimeMinute.value)
+        list.sort((a, b) => parseInt(a) - parseInt(b))
+    }
+    return list
+})
+
+// Sync time selector values back to newChore.time
+watch([choreTimeHour, choreTimeMinute, choreTimePeriod], () => {
+    if (choreTimeHour.value === null) {
+        newChore.value.time = ''
+        return
+    }
+    let h = parseInt(choreTimeHour.value)
+    if (choreTimePeriod.value === 'PM' && h < 12) h += 12
+    if (choreTimePeriod.value === 'AM' && h === 12) h = 0
+    const padH = String(h).padStart(2, '0')
+    const padM = String(choreTimeMinute.value || '00').padStart(2, '0')
+    newChore.value.time = `${padH}:${padM}`
+})
+
+// Decode 24h format time (HH:MM) to 12h fields for modal UI
+const decodeChoreTime = (timeStr) => {
+    if (!timeStr) {
+        choreTimeHour.value = null
+        choreTimeMinute.value = '00'
+        choreTimePeriod.value = 'AM'
+        return
+    }
+    const parts = timeStr.split(':')
+    if (parts.length !== 2) return
+    let h = parseInt(parts[0])
+    const m = parts[1]
+
+    const period = h >= 12 ? 'PM' : 'AM'
+    choreTimePeriod.value = period
+
+    h = h % 12
+    if (h === 0) h = 12
+    choreTimeHour.value = h
+    choreTimeMinute.value = m
+}
+
+// Scroll container template refs for scrollable wheels
+const hoursScrollContainer = ref(null)
+const minutesScrollContainer = ref(null)
+const periodScrollContainer = ref(null)
+
+const isProgrammaticScroll = ref(false)
+
+const scrollToSelectedTime = () => {
+    isProgrammaticScroll.value = true
+    nextTick(() => {
+        if (choreTimeHour.value !== null) {
+            const hourIdx = choreTimeHour.value - 1
+            if (hoursScrollContainer.value) {
+                hoursScrollContainer.value.scrollTop = hourIdx * 48
+            }
+
+            const minIdx = computedMinutesList.value.indexOf(
+                choreTimeMinute.value,
+            )
+            if (minIdx !== -1 && minutesScrollContainer.value) {
+                minutesScrollContainer.value.scrollTop = minIdx * 48
+            }
+
+            const periodIdx = choreTimePeriod.value === 'PM' ? 1 : 0
+            if (periodScrollContainer.value) {
+                periodScrollContainer.value.scrollTop = periodIdx * 48
+            }
+        } else {
+            if (hoursScrollContainer.value)
+                hoursScrollContainer.value.scrollTop = 0
+            if (minutesScrollContainer.value)
+                minutesScrollContainer.value.scrollTop = 0
+            if (periodScrollContainer.value)
+                periodScrollContainer.value.scrollTop = 0
+        }
+
+        setTimeout(() => {
+            isProgrammaticScroll.value = false
+        }, 150)
+    })
+}
+
+// Scroll event handlers to update state dynamically on wheel scroll (with debounce to prevent DOM rendering interrupting active scrolls)
+let hoursTimeout = null
+let minutesTimeout = null
+let periodTimeout = null
+
+const onHoursScroll = (e) => {
+    if (isProgrammaticScroll.value) return
+    clearTimeout(hoursTimeout)
+    hoursTimeout = setTimeout(() => {
+        const scrollTop = e.target.scrollTop
+        const index = Math.round(scrollTop / 48)
+        const val = index + 1
+        if (val >= 1 && val <= 12 && choreTimeHour.value !== val) {
+            choreTimeHour.value = val
+        }
+    }, 150)
+}
+
+const onMinutesScroll = (e) => {
+    if (isProgrammaticScroll.value) return
+    clearTimeout(minutesTimeout)
+    minutesTimeout = setTimeout(() => {
+        const scrollTop = e.target.scrollTop
+        const index = Math.round(scrollTop / 48)
+        const list = computedMinutesList.value
+        if (index >= 0 && index < list.length) {
+            const val = list[index]
+            if (choreTimeMinute.value !== val) {
+                choreTimeMinute.value = val
+            }
+        }
+    }, 150)
+}
+
+const onPeriodScroll = (e) => {
+    if (isProgrammaticScroll.value) return
+    clearTimeout(periodTimeout)
+    periodTimeout = setTimeout(() => {
+        const scrollTop = e.target.scrollTop
+        const index = Math.round(scrollTop / 48)
+        const val = index === 1 ? 'PM' : 'AM'
+        if (choreTimePeriod.value !== val) {
+            choreTimePeriod.value = val
+        }
+    }, 150)
+}
+
+const selectHour = (h) => {
+    choreTimeHour.value = h
+    scrollToSelectedTime()
+}
+
+const selectMinute = (m) => {
+    choreTimeMinute.value = m
+    scrollToSelectedTime()
+}
+
+const selectPeriod = (p) => {
+    choreTimePeriod.value = p
+    scrollToSelectedTime()
+}
+
+const enableTimeLimit = () => {
+    choreTimeHour.value = 12
+    choreTimeMinute.value = '00'
+    choreTimePeriod.value = 'AM'
+    scrollToSelectedTime()
+}
+
+// Sync scroll positions when modal opens
+watch(isManageModalOpen, (newVal) => {
+    if (newVal) {
+        scrollToSelectedTime()
     }
 })
 
@@ -152,15 +341,33 @@ const decodeRewardIntoFields = (reward) => {
         textRewardValue.value = reward
     }
 }
+const clearReward = () => {
+    monetaryAmount.value = ''
+    textRewardValue.value = ''
+}
 
 // Label modal state
 const isLabelsModalOpen = ref(false)
+const isLabelFormOpen = ref(false)
 const newLabelName = ref('')
 const newLabelReward = ref('')
+const newLabelIsBankable = ref(true)
 const labelRewardType = ref('monetary')
 const labelMonetaryAmount = ref('')
 const labelTextReward = ref('')
 const editingLabel = ref(null)
+
+const labelHasBonus = ref(false)
+const labelBonusDays = ref([0, 1, 2, 3, 4])
+const labelBonusValue = ref('')
+const labelBonusExpires = ref(3)
+const labelBonusRequiresApproval = ref(true)
+
+const toggleLabelBonusDay = (v) => {
+    const i = labelBonusDays.value.indexOf(v)
+    if (i === -1) labelBonusDays.value.push(v)
+    else labelBonusDays.value.splice(i, 1)
+}
 
 // Sync label reward fields
 watch([labelRewardType, labelMonetaryAmount, labelTextReward], () => {
@@ -168,8 +375,61 @@ watch([labelRewardType, labelMonetaryAmount, labelTextReward], () => {
         const n = parseFloat(labelMonetaryAmount.value)
         newLabelReward.value =
             labelMonetaryAmount.value && !isNaN(n) ? `$${n.toFixed(2)}` : ''
+        newLabelIsBankable.value = true
     } else {
         newLabelReward.value = labelTextReward.value.trim()
+    }
+})
+
+watch(isLabelFormOpen, async (newVal, oldVal) => {
+    if (!newVal && oldVal) {
+        if (newLabelName.value.trim()) {
+            await saveLabel()
+        }
+    }
+})
+
+watch(
+    () => newChore.value.is_bankable,
+    (newVal) => {
+        if (!newVal) {
+            choreHasBonus.value = false
+            choreBonusDays.value = [0, 1, 2, 3, 4]
+            choreBonusValue.value = ''
+            choreBonusExpires.value = 3
+            choreBonusRequiresApproval.value = true
+        }
+    },
+)
+
+watch(newLabelIsBankable, (newVal) => {
+    if (!newVal) {
+        resetLabelBonusFields()
+    }
+})
+
+const selectedLabel = computed(() => {
+    return labels.value.find((l) => l.id === newChore.value.label_id)
+})
+
+const selectedLabelHasReward = computed(() => {
+    return !!(selectedLabel.value?.reward || selectedLabel.value?.bonus_reward)
+})
+
+const formatRequiredDays = (days) => {
+    if (!days || !days.length) return 'None'
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return days.map((d) => dayNames[d]).join(', ')
+}
+
+watch(selectedLabelHasReward, (newVal) => {
+    if (newVal) {
+        clearReward()
+        choreHasBonus.value = false
+        choreBonusDays.value = [0, 1, 2, 3, 4]
+        choreBonusValue.value = ''
+        choreBonusExpires.value = 3
+        choreBonusRequiresApproval.value = true
     }
 })
 
@@ -404,11 +664,30 @@ const verifyPin = () => {
 }
 
 // ── Chore CRUD ───────────────────────────────────────────────────────────────
+const choreHasBonus = ref(false)
+const choreBonusDays = ref([0, 1, 2, 3, 4])
+const choreBonusValue = ref('')
+const choreBonusExpires = ref(3)
+const choreBonusRequiresApproval = ref(true)
+
+const toggleChoreBonusDay = (v) => {
+    const i = choreBonusDays.value.indexOf(v)
+    if (i === -1) choreBonusDays.value.push(v)
+    else choreBonusDays.value.splice(i, 1)
+}
+
 const openAddModal = () => {
     editingChore.value = null
     newChore.value = blankChore()
     decodeRewardIntoFields('')
+    decodeChoreTime('')
     showRewardLibraryPicker.value = false
+    choreHasBonus.value = false
+    choreBonusDays.value = [0, 1, 2, 3, 4]
+    choreBonusValue.value = ''
+    choreBonusExpires.value = 3
+    choreBonusRequiresApproval.value = true
+    isRewardExpanded.value = false
     isManageModalOpen.value = true
 }
 const openEditModal = (chore) => {
@@ -419,10 +698,29 @@ const openEditModal = (chore) => {
         time: chore.time || '',
         days: chore.days || [0, 1, 2, 3, 4, 5, 6],
         reward: chore.reward || '',
+        is_bankable: chore.is_bankable ?? true,
         label_id: chore.label_id || null,
     }
     decodeRewardIntoFields(chore.reward)
+    decodeChoreTime(chore.time)
     showRewardLibraryPicker.value = false
+
+    if (chore.bonus_reward) {
+        choreHasBonus.value = true
+        choreBonusDays.value = chore.bonus_reward.required_days || []
+        choreBonusValue.value = chore.bonus_reward.reward_value || ''
+        choreBonusExpires.value = chore.bonus_reward.expires_in_days || 3
+        choreBonusRequiresApproval.value =
+            chore.bonus_reward.requires_approval ?? true
+    } else {
+        choreHasBonus.value = false
+        choreBonusDays.value = [0, 1, 2, 3, 4]
+        choreBonusValue.value = ''
+        choreBonusExpires.value = 3
+        choreBonusRequiresApproval.value = true
+    }
+
+    isRewardExpanded.value = !!chore.reward
     isManageModalOpen.value = true
 }
 const openDuplicateModal = (chore) => {
@@ -433,10 +731,13 @@ const openDuplicateModal = (chore) => {
         time: chore.time || '',
         days: chore.days ? [...chore.days] : [0, 1, 2, 3, 4, 5, 6],
         reward: chore.reward || '',
+        is_bankable: chore.is_bankable ?? true,
         label_id: chore.label_id || null,
     }
     decodeRewardIntoFields(chore.reward)
+    decodeChoreTime(chore.time)
     showRewardLibraryPicker.value = false
+    isRewardExpanded.value = !!chore.reward
     isManageModalOpen.value = true
 }
 const saveChore = async () => {
@@ -444,6 +745,21 @@ const saveChore = async () => {
         const payload = {
             ...newChore.value,
             label_id: newChore.value.label_id || null,
+        }
+
+        if (
+            newChore.value.is_bankable &&
+            choreHasBonus.value &&
+            choreBonusValue.value
+        ) {
+            payload.bonus_reward = {
+                required_days: choreBonusDays.value,
+                reward_value: choreBonusValue.value,
+                expires_in_days: choreBonusExpires.value || null,
+                requires_approval: choreBonusRequiresApproval.value,
+            }
+        } else {
+            payload.bonus_reward = null
         }
         if (editingChore.value)
             await axios.put(`/api/chores/${editingChore.value.id}`, payload)
@@ -511,21 +827,53 @@ const executeCloneGroup = async () => {
 }
 
 // ── Label CRUD ───────────────────────────────────────────────────────────────
+const resetLabelBonusFields = () => {
+    labelHasBonus.value = false
+    labelBonusDays.value = [0, 1, 2, 3, 4]
+    labelBonusValue.value = ''
+    labelBonusExpires.value = 3
+    labelBonusRequiresApproval.value = true
+}
 const openLabelsModal = () => {
     editingLabel.value = null
     newLabelName.value = ''
     decodeLabelReward('')
+    newLabelIsBankable.value = true
+    resetLabelBonusFields()
     isLabelsModalOpen.value = true
+}
+const startCreateLabel = () => {
+    editingLabel.value = null
+    newLabelName.value = ''
+    decodeLabelReward('')
+    newLabelIsBankable.value = true
+    resetLabelBonusFields()
+    isLabelFormOpen.value = true
 }
 const startEditLabel = (label) => {
     editingLabel.value = label
     newLabelName.value = label.name
     decodeLabelReward(label.reward)
+    newLabelIsBankable.value = label.is_bankable ?? true
+
+    if (label.bonus_reward) {
+        labelHasBonus.value = true
+        labelBonusDays.value = label.bonus_reward.required_days || []
+        labelBonusValue.value = label.bonus_reward.reward_value || ''
+        labelBonusExpires.value = label.bonus_reward.expires_in_days || 3
+        labelBonusRequiresApproval.value =
+            label.bonus_reward.requires_approval ?? true
+    } else {
+        resetLabelBonusFields()
+    }
+    isLabelFormOpen.value = true
 }
 const cancelEditLabel = () => {
-    editingLabel.value = null
     newLabelName.value = ''
+    editingLabel.value = null
     decodeLabelReward('')
+    newLabelIsBankable.value = true
+    isLabelFormOpen.value = false
 }
 const saveLabel = async () => {
     if (!newLabelName.value.trim()) return
@@ -533,6 +881,22 @@ const saveLabel = async () => {
         const payload = {
             name: newLabelName.value,
             reward: newLabelReward.value || null,
+            is_bankable: newLabelIsBankable.value,
+        }
+
+        if (
+            newLabelIsBankable.value &&
+            labelHasBonus.value &&
+            labelBonusValue.value
+        ) {
+            payload.bonus_reward = {
+                required_days: labelBonusDays.value,
+                reward_value: labelBonusValue.value,
+                expires_in_days: labelBonusExpires.value || null,
+                requires_approval: labelBonusRequiresApproval.value,
+            }
+        } else {
+            payload.bonus_reward = null
         }
         if (editingLabel.value) {
             const r = await axios.put(
@@ -576,6 +940,7 @@ const formatTime = (t) => {
     return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`
 }
 const rewardIsMonetary = (r) => r && /^\$/.test(r.trim())
+const formatRewardText = (r) => (r ? r.replace(/^\$/, '') : '')
 const getChoreReward = (chore) => chore.reward || chore.label?.reward || null
 
 const todaysChores = computed(() => {
@@ -612,6 +977,112 @@ const groupedChores = computed(() => {
     }
     return groups
 })
+
+// ── Bank & Approvals ─────────────────────────────────────────────────────────
+const isBankModalOpen = ref(false)
+const bankBalance = ref(0)
+const bankTextRewards = ref([])
+const dailyBankTextRewards = ref([])
+const pendingBankBalance = ref(0)
+const pendingBankTextRewards = ref([])
+const bankHistory = ref([])
+
+const fetchBank = async () => {
+    try {
+        const r = await axios.get('/api/rewards/bank', {
+            params: { profile: props.activeProfile },
+        })
+        bankBalance.value = r.data.monetary_balance
+        bankTextRewards.value = r.data.textual_rewards
+        dailyBankTextRewards.value = r.data.daily_rewards || []
+        pendingBankBalance.value = r.data.pending_monetary_balance
+        pendingBankTextRewards.value = r.data.pending_textual_rewards
+        bankHistory.value = r.data.history
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+const openBankModal = () => {
+    fetchBank()
+    isBankModalOpen.value = true
+}
+
+const isRedeemModalOpen = ref(false)
+const redeemPayload = ref(null)
+
+const confirmRedeemReward = (type, amount, text = null, isDaily = false) => {
+    if (!isUnlocked.value) {
+        promptUnlock()
+        return
+    }
+    redeemPayload.value = { type, amount, text, isDaily }
+    isRedeemModalOpen.value = true
+}
+
+const executeRedeemReward = async () => {
+    if (!redeemPayload.value) return
+    try {
+        await axios.post('/api/rewards/redeem', {
+            profile: props.activeProfile,
+            type: redeemPayload.value.type,
+            amount: redeemPayload.value.amount,
+            reward_text: redeemPayload.value.text,
+            is_daily: redeemPayload.value.isDaily,
+        })
+        fetchBank()
+        isRedeemModalOpen.value = false
+        redeemPayload.value = null
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+const isApprovalsModalOpen = ref(false)
+const pendingApprovals = ref([])
+
+const fetchApprovals = async () => {
+    try {
+        const r = await axios.get('/api/chores/approvals')
+        pendingApprovals.value = r.data.map((c) => ({
+            ...c,
+            awarded_value:
+                c.is_bonus || c.is_label
+                    ? c.awarded_value || ''
+                    : getChoreReward(c.chore) || '',
+        }))
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+const openApprovalsModal = () => {
+    fetchApprovals()
+    isApprovalsModalOpen.value = true
+}
+
+const processApproval = async (completion, action) => {
+    try {
+        await axios.post(`/api/chores/approvals/${completion.id}`, {
+            action,
+            awarded_value:
+                completion.awarded_value !== undefined
+                    ? completion.awarded_value
+                    : getChoreReward(completion.chore),
+        })
+        fetchApprovals()
+        fetchChores() // refresh status
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+watch(
+    () => props.activeProfile,
+    () => {
+        if (isBankModalOpen.value) fetchBank()
+    },
+)
 </script>
 
 <template>
@@ -670,7 +1141,24 @@ const groupedChores = computed(() => {
                 <span class="text-xs font-bold">{{ profile.name }}</span>
             </Button>
             <div class="flex-1" />
+            <Button
+                variant="outline"
+                class="h-14 shrink-0 rounded-2xl bg-white/50 px-4 font-bold"
+                @click="openBankModal"
+                title="Wallet / Bank"
+            >
+                <Wallet class="mr-2 h-5 w-5 text-amber-500" /> Bank
+            </Button>
             <template v-if="isUnlocked">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-14 w-14 shrink-0 rounded-2xl bg-white/50"
+                    @click="openApprovalsModal"
+                    title="Approvals Inbox"
+                >
+                    <Inbox class="h-5 w-5" />
+                </Button>
                 <Button
                     variant="ghost"
                     size="icon"
@@ -738,7 +1226,9 @@ const groupedChores = computed(() => {
                     class="flex flex-col overflow-hidden rounded-[2rem] bg-white/40 backdrop-blur-2xl dark:bg-white/5"
                     :class="
                         group.chores.every((c) => c.completed)
-                            ? 'ring-primary/40 ring-2'
+                            ? group.label && group.label.is_bankable === false
+                                ? 'bg-green-50/80 ring-2 ring-green-500/50 dark:bg-green-900/20'
+                                : 'ring-primary/40 ring-2'
                             : ''
                     "
                 >
@@ -818,7 +1308,7 @@ const groupedChores = computed(() => {
                                         "
                                         class="h-3 w-3"
                                     />
-                                    {{ group.label.reward }}
+                                    {{ formatRewardText(group.label.reward) }}
                                 </span>
                             </div>
                             <div
@@ -833,9 +1323,30 @@ const groupedChores = computed(() => {
                             </div>
                             <span
                                 v-if="group.chores.every((c) => c.completed)"
-                                class="text-primary mt-1 inline-block text-xs font-bold"
-                                >🎉 All done!</span
+                                class="mt-1 inline-block text-xs font-bold"
+                                :class="
+                                    group.label &&
+                                    group.label.is_bankable === false
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-primary'
+                                "
                             >
+                                <template
+                                    v-if="
+                                        group.label &&
+                                        group.label.is_bankable === false
+                                    "
+                                >
+                                    🎉
+                                    {{
+                                        group.label.reward
+                                            ? group.label.reward +
+                                              ' earned, pending parental approval!'
+                                            : 'Reward earned, pending parental approval!'
+                                    }}
+                                </template>
+                                <template v-else> 🎉 All done! </template>
+                            </span>
                         </div>
                         <!-- Clone button (Plan mode only) -->
                         <Button
@@ -890,10 +1401,21 @@ const groupedChores = computed(() => {
                                     class="text-xs font-semibold opacity-40"
                                     >By {{ formatTime(chore.time) }}</span
                                 >
+                                <span
+                                    v-if="chore.completed && chore.reward && chore.is_bankable === false"
+                                    class="mt-0.5 inline-block text-xs font-bold text-green-600 dark:text-green-400"
+                                >
+                                    🎉 {{ chore.reward }} earned for today!
+                                </span>
                             </div>
                             <div
                                 v-if="chore.reward"
-                                class="flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 dark:bg-amber-900/20"
+                                class="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1"
+                                :class="
+                                    chore.completed
+                                        ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                        : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
+                                "
                             >
                                 <component
                                     :is="
@@ -901,12 +1423,11 @@ const groupedChores = computed(() => {
                                             ? DollarSign
                                             : Gift
                                     "
-                                    class="h-3 w-3 text-amber-500"
+                                    class="currentColor h-3 w-3"
                                 />
-                                <span
-                                    class="text-xs font-black text-amber-600 dark:text-amber-400"
-                                    >{{ chore.reward }}</span
-                                >
+                                <span class="currentColor text-xs font-black">{{
+                                    formatRewardText(chore.reward)
+                                }}</span>
                             </div>
                             <div
                                 v-if="isUnlocked"
@@ -1168,196 +1689,526 @@ const groupedChores = computed(() => {
                                 :key="l.id"
                                 :value="l.id"
                             >
-                                {{ l.name
-                                }}{{ l.reward ? ` · ${l.reward}` : '' }}
+                                {{ l.name }}
+                                {{
+                                    l.reward
+                                        ? (rewardIsMonetary(l.reward)
+                                              ? ' 💲'
+                                              : ' 🎁') +
+                                          ' ' +
+                                          formatRewardText(l.reward)
+                                        : ''
+                                }}
+                                {{ l.bonus_reward ? ' ⭐ Streak' : '' }}
                             </option>
                         </select>
                     </div>
 
-                    <!-- Reward -->
-                    <div class="grid gap-2">
-                        <label
-                            class="flex items-center gap-1.5 text-sm font-bold"
-                        >
-                            <Gift class="h-3.5 w-3.5" /> Reward
-                            <span class="font-normal opacity-50"
-                                >(Optional — overrides label reward)</span
-                            >
-                        </label>
-
-                        <!-- Type Switcher -->
-                        <div class="bg-muted flex w-fit gap-1 rounded-xl p-1">
-                            <button
-                                type="button"
-                                @click="
-                                    rewardType = 'monetary'
-                                    textRewardValue = ''
-                                "
-                                class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-all"
-                                :class="
-                                    rewardType === 'monetary'
-                                        ? 'bg-background text-foreground shadow'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                "
-                            >
-                                <DollarSign class="h-4 w-4" /> Monetary
-                            </button>
-                            <button
-                                type="button"
-                                @click="
-                                    rewardType = 'text'
-                                    monetaryAmount = ''
-                                "
-                                class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-all"
-                                :class="
-                                    rewardType === 'text'
-                                        ? 'bg-background text-foreground shadow'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                "
-                            >
-                                <Gift class="h-4 w-4" /> Other
-                            </button>
-                        </div>
-
-                        <!-- Monetary input -->
+                    <!-- Label Reward Info Box -->
+                    <div
+                        v-if="
+                            selectedLabel &&
+                            (selectedLabel.reward || selectedLabel.bonus_reward)
+                        "
+                        class="space-y-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4"
+                    >
                         <div
-                            v-if="rewardType === 'monetary'"
-                            class="flex items-center gap-2"
+                            class="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400"
                         >
-                            <div class="relative flex-1">
-                                <span
-                                    class="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold"
-                                    >$</span
-                                >
-                                <Input
-                                    v-model="monetaryAmount"
-                                    type="number"
-                                    min="0"
-                                    step="0.25"
-                                    placeholder="0.00"
-                                    class="pl-7"
-                                />
-                            </div>
-                            <span class="text-muted-foreground text-sm"
-                                >per chore</span
-                            >
-                        </div>
-
-                        <!-- Text reward input + library -->
-                        <div v-else class="flex flex-col gap-2">
-                            <div class="flex gap-2">
-                                <Input
-                                    v-model="textRewardValue"
-                                    placeholder="e.g. 30 min screen time"
-                                    class="flex-1"
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    class="shrink-0 px-3"
-                                    @click="
-                                        showRewardLibraryPicker =
-                                            !showRewardLibraryPicker
-                                    "
-                                    title="Pick from library"
-                                >
-                                    <Tag class="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="shrink-0 px-3 text-xs"
-                                    :disabled="
-                                        !textRewardValue.trim() ||
-                                        textRewardLibrary.includes(
-                                            textRewardValue.trim(),
-                                        )
-                                    "
-                                    @click="saveTextRewardToLibrary"
-                                    title="Save to library"
-                                >
-                                    <Check class="mr-1 h-4 w-4" /> Save
-                                </Button>
-                            </div>
-
-                            <!-- Library picker -->
-                            <div
-                                v-if="showRewardLibraryPicker"
-                                class="border-border bg-background rounded-xl border shadow-lg"
-                            >
-                                <div class="max-h-40 overflow-y-auto p-2">
-                                    <button
-                                        v-for="item in textRewardLibrary"
-                                        :key="item"
-                                        type="button"
-                                        @click="pickLibraryReward(item)"
-                                        class="hover:bg-muted group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
-                                    >
-                                        <span>{{ item }}</span>
-                                        <X
-                                            class="h-3.5 w-3.5 text-red-500 opacity-0 group-hover:opacity-50"
-                                            @click.stop="
-                                                removeLibraryReward(item)
-                                            "
-                                        />
-                                    </button>
-                                    <p
-                                        v-if="!textRewardLibrary.length"
-                                        class="text-muted-foreground px-3 py-4 text-center text-xs"
-                                    >
-                                        Library is empty.
-                                    </p>
-                                </div>
-                                <div class="flex gap-2 border-t p-2">
-                                    <Input
-                                        v-model="newLibraryRewardInput"
-                                        placeholder="Add to library…"
-                                        class="h-8 text-xs"
-                                        @keyup.enter="addLibraryReward"
-                                    />
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="h-8 px-2"
-                                        @click="addLibraryReward"
-                                        ><Plus class="h-4 w-4"
-                                    /></Button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Preview -->
-                        <div
-                            v-if="newChore.reward"
-                            class="flex w-fit items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20"
-                        >
-                            <component
-                                :is="
-                                    rewardIsMonetary(newChore.reward)
-                                        ? DollarSign
-                                        : Gift
-                                "
-                                class="h-4 w-4 text-amber-500"
+                            <Gift
+                                class="h-4 w-4 text-amber-600 dark:text-amber-500"
                             />
-                            <span
-                                class="text-sm font-black text-amber-600 dark:text-amber-400"
-                                >{{ newChore.reward }}</span
+                            Label Reward Attached
+                        </div>
+                        <div class="space-y-1.5 text-sm">
+                            <p
+                                v-if="selectedLabel.reward"
+                                class="text-foreground flex items-center gap-1.5 text-sm font-medium"
                             >
+                                <span
+                                    class="text-muted-foreground text-xs font-bold tracking-wider uppercase"
+                                    >Base Reward:</span
+                                >
+                                <component
+                                    :is="
+                                        rewardIsMonetary(selectedLabel.reward)
+                                            ? DollarSign
+                                            : Gift
+                                    "
+                                    class="h-3.5 w-3.5 text-amber-600 dark:text-amber-500"
+                                />
+                                {{ formatRewardText(selectedLabel.reward) }}
+                                <span
+                                    v-if="selectedLabel.is_bankable"
+                                    class="text-muted-foreground text-xs font-normal"
+                                >
+                                    (Bankable)
+                                </span>
+                            </p>
+
+                            <div
+                                v-if="selectedLabel.bonus_reward"
+                                class="mt-2 space-y-1 border-t border-amber-500/15 pt-2"
+                            >
+                                <p
+                                    class="text-foreground text-xs font-bold tracking-wider uppercase"
+                                >
+                                    Streak / Bonus Reward
+                                </p>
+                                <p class="text-foreground text-sm font-medium">
+                                    {{
+                                        selectedLabel.bonus_reward.reward_value
+                                    }}
+                                </p>
+                                <p class="text-muted-foreground text-xs">
+                                    Earned by completing on:
+                                    <span class="text-foreground font-bold">
+                                        {{
+                                            formatRequiredDays(
+                                                selectedLabel.bonus_reward
+                                                    .required_days,
+                                            )
+                                        }}
+                                    </span>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Time -->
+                    <!-- Reward -->
+                    <template v-if="!selectedLabelHasReward">
+                        <div class="border-t pt-4">
+                            <div class="flex items-center justify-between">
+                                <button
+                                    type="button"
+                                    @click="
+                                        isRewardExpanded = !isRewardExpanded
+                                    "
+                                    class="flex flex-1 cursor-pointer items-center justify-between py-2 text-left focus:outline-none"
+                                >
+                                    <span
+                                        class="flex items-center gap-2 text-sm font-bold"
+                                    >
+                                        <Gift class="text-primary h-4 w-4" />
+                                        Custom Reward
+                                        <span
+                                            class="text-muted-foreground text-xs font-normal"
+                                        >
+                                            (Optional — overrides label reward)
+                                        </span>
+                                    </span>
+                                    <ChevronDown
+                                        class="h-4 w-4 shrink-0 transition-transform duration-200"
+                                        :class="{
+                                            'rotate-180': isRewardExpanded,
+                                        }"
+                                    />
+                                </button>
+                                <!-- Clear Reward Button -->
+                                <Button
+                                    v-if="monetaryAmount || textRewardValue"
+                                    type="button"
+                                    variant="ghost"
+                                    size="xs"
+                                    class="h-7 px-2 text-xs font-bold text-red-500 hover:bg-red-50"
+                                    @click.stop="clearReward"
+                                >
+                                    Clear
+                                </Button>
+                            </div>
+
+                            <div
+                                v-show="isRewardExpanded"
+                                class="mt-3 space-y-4"
+                            >
+                                <!-- Type Switcher -->
+                                <div
+                                    class="bg-muted flex w-fit gap-1 rounded-xl p-1"
+                                >
+                                    <button
+                                        type="button"
+                                        @click="
+                                            ((rewardType = 'monetary'),
+                                            (textRewardValue = ''))
+                                        "
+                                        class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-all"
+                                        :class="
+                                            rewardType === 'monetary'
+                                                ? 'bg-background text-foreground shadow'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                    >
+                                        <DollarSign class="h-4 w-4" /> Monetary
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="
+                                            ((rewardType = 'text'),
+                                            (monetaryAmount = ''))
+                                        "
+                                        class="flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-all"
+                                        :class="
+                                            rewardType === 'text'
+                                                ? 'bg-background text-foreground shadow'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        "
+                                    >
+                                        <Gift class="h-4 w-4" /> Other
+                                    </button>
+                                </div>
+
+                                <!-- Monetary input -->
+                                <div
+                                    v-if="rewardType === 'monetary'"
+                                    class="flex flex-col gap-2"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <div class="relative flex-1">
+                                            <span
+                                                class="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold"
+                                                >$</span
+                                            >
+                                            <Input
+                                                v-model="monetaryAmount"
+                                                type="number"
+                                                min="0"
+                                                step="0.25"
+                                                placeholder="0.00"
+                                                class="pl-7"
+                                            />
+                                        </div>
+                                        <span
+                                            class="text-muted-foreground text-sm"
+                                            >per chore</span
+                                        >
+                                    </div>
+                                    <!-- Monetary rewards are always bankable -->
+                                </div>
+
+                                <!-- Text reward input + library -->
+                                <div v-else class="flex flex-col gap-2">
+                                    <div class="flex gap-2">
+                                        <Input
+                                            v-model="textRewardValue"
+                                            placeholder="e.g. 30 min screen time"
+                                            class="flex-1"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="shrink-0 px-3"
+                                            @click="
+                                                showRewardLibraryPicker =
+                                                    !showRewardLibraryPicker
+                                            "
+                                            title="Pick from library"
+                                        >
+                                            <Tag class="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="shrink-0 px-3 text-xs"
+                                            :disabled="
+                                                !textRewardValue.trim() ||
+                                                textRewardLibrary.includes(
+                                                    textRewardValue.trim(),
+                                                )
+                                            "
+                                            @click="saveTextRewardToLibrary"
+                                            title="Save to library"
+                                        >
+                                            <Check class="mr-1 h-4 w-4" /> Save
+                                        </Button>
+                                    </div>
+
+                                    <label
+                                        class="mt-1 flex cursor-pointer items-center justify-between py-1.5"
+                                        v-if="textRewardValue"
+                                    >
+                                        <span class="text-sm font-bold"
+                                            >Bankable (Rolls over to next
+                                            day)</span
+                                        >
+                                        <Switch
+                                            v-model:checked="
+                                                newChore.is_bankable
+                                            "
+                                        />
+                                    </label>
+
+                                    <!-- Library picker -->
+                                    <div
+                                        v-if="showRewardLibraryPicker"
+                                        class="border-border bg-background rounded-xl border shadow-lg"
+                                    >
+                                        <div
+                                            class="max-h-40 overflow-y-auto p-2"
+                                        >
+                                            <button
+                                                v-for="item in textRewardLibrary"
+                                                :key="item"
+                                                type="button"
+                                                @click="pickLibraryReward(item)"
+                                                class="hover:bg-muted group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors"
+                                            >
+                                                <span>{{ item }}</span>
+                                                <X
+                                                    class="h-3.5 w-3.5 text-red-500 opacity-0 group-hover:opacity-50"
+                                                    @click.stop="
+                                                        removeLibraryReward(
+                                                            item,
+                                                        )
+                                                    "
+                                                />
+                                            </button>
+                                            <p
+                                                v-if="!textRewardLibrary.length"
+                                                class="text-muted-foreground px-3 py-4 text-center text-xs"
+                                            >
+                                                Library is empty.
+                                            </p>
+                                        </div>
+                                        <div class="flex gap-2 border-t p-2">
+                                            <Input
+                                                v-model="newLibraryRewardInput"
+                                                placeholder="Add to library…"
+                                                class="h-8 text-xs"
+                                                @keyup.enter="addLibraryReward"
+                                            />
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                class="h-8 px-2"
+                                                @click="addLibraryReward"
+                                                ><Plus class="h-4 w-4"
+                                            /></Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chore Streak / Bonus Reward Section -->
+                                <div
+                                    v-show="
+                                        newChore.is_bankable &&
+                                        (monetaryAmount || textRewardValue)
+                                    "
+                                    class="border-primary/20 bg-primary/5 rounded-xl border p-4"
+                                >
+                                    <label
+                                        class="mb-3 flex cursor-pointer items-center justify-between py-1"
+                                    >
+                                        <span
+                                            class="text-primary text-sm font-bold"
+                                            >Enable Streak / Bonus Reward</span
+                                        >
+                                        <Switch
+                                            v-model:checked="choreHasBonus"
+                                        />
+                                    </label>
+
+                                    <div
+                                        v-if="choreHasBonus"
+                                        class="border-primary/20 grid gap-4 border-l-2 pl-6 transition-all"
+                                    >
+                                        <div>
+                                            <label
+                                                class="text-muted-foreground mb-1.5 block text-xs font-bold tracking-wider uppercase"
+                                                >Required Days (Current
+                                                Week)</label
+                                            >
+                                            <div class="flex flex-wrap gap-1">
+                                                <button
+                                                    v-for="(day, index) in [
+                                                        'Sun',
+                                                        'Mon',
+                                                        'Tue',
+                                                        'Wed',
+                                                        'Thu',
+                                                        'Fri',
+                                                        'Sat',
+                                                    ]"
+                                                    :key="index"
+                                                    type="button"
+                                                    @click="
+                                                        toggleChoreBonusDay(
+                                                            index,
+                                                        )
+                                                    "
+                                                    class="h-8 w-8 rounded-full text-xs font-bold transition-all"
+                                                    :class="
+                                                        choreBonusDays.includes(
+                                                            index,
+                                                        )
+                                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                                    "
+                                                >
+                                                    {{ day.charAt(0) }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                class="text-muted-foreground mb-1 block text-xs font-bold tracking-wider uppercase"
+                                                >Bonus Reward</label
+                                            >
+                                            <Input
+                                                v-model="choreBonusValue"
+                                                placeholder="e.g. 15 mins stay up late or $5.00"
+                                            />
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label
+                                                    class="text-muted-foreground mb-1 block text-xs font-bold tracking-wider uppercase"
+                                                    >Expires In (Days)</label
+                                                >
+                                                <Input
+                                                    v-model="choreBonusExpires"
+                                                    type="number"
+                                                    min="1"
+                                                    placeholder="Never"
+                                                />
+                                            </div>
+                                            <div class="flex items-center pt-5">
+                                                <label
+                                                    class="flex flex-1 cursor-pointer items-center justify-between gap-2"
+                                                >
+                                                    <span
+                                                        class="text-xs leading-tight font-bold"
+                                                        >Require Approval</span
+                                                    >
+                                                    <Switch
+                                                        v-model:checked="
+                                                            choreBonusRequiresApproval
+                                                        "
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Time Selector -->
                     <div class="grid gap-1.5">
-                        <label class="text-sm font-bold"
-                            >Must be done by
-                            <span class="font-normal opacity-50"
-                                >(Optional)</span
-                            ></label
+                        <label
+                            class="flex items-center justify-between text-sm font-bold"
                         >
-                        <Input v-model="newChore.time" type="time" />
+                            <span>
+                                Must be completed by
+                                <span class="font-normal opacity-50"
+                                    >(Optional)</span
+                                >
+                            </span>
+                            <button
+                                v-if="choreTimeHour !== null"
+                                type="button"
+                                @click="choreTimeHour = null"
+                                class="text-xs font-bold text-red-500 transition-colors hover:text-red-600"
+                            >
+                                Clear Time
+                            </button>
+                        </label>
+
+                        <div v-if="choreTimeHour === null">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                class="hover:bg-muted border-muted-foreground/30 text-muted-foreground flex h-11 w-full items-center justify-center gap-2 rounded-2xl border-dashed font-bold"
+                                @click="enableTimeLimit"
+                            >
+                                <Clock class="h-4 w-4" /> Add Completion Time
+                            </Button>
+                        </div>
+                        <div
+                            v-else
+                            class="bg-card border-border flex h-12 divide-x overflow-hidden rounded-2xl border shadow-sm"
+                        >
+                            <!-- Hours Column -->
+                            <div
+                                ref="hoursScrollContainer"
+                                @scroll="onHoursScroll"
+                                class="flex-1 snap-y snap-mandatory overflow-y-auto scroll-smooth py-0 text-center"
+                                style="
+                                    scrollbar-width: none;
+                                    -ms-overflow-style: none;
+                                "
+                            >
+                                <button
+                                    v-for="h in 12"
+                                    :key="h"
+                                    type="button"
+                                    @click="selectHour(h)"
+                                    class="block flex h-12 w-full shrink-0 snap-center items-center justify-center text-sm font-bold transition-colors"
+                                    :class="
+                                        choreTimeHour === h
+                                            ? 'bg-primary text-primary-foreground font-black'
+                                            : 'hover:bg-muted text-foreground/80'
+                                    "
+                                >
+                                    {{ h }}
+                                </button>
+                            </div>
+                            <!-- Minutes Column -->
+                            <div
+                                ref="minutesScrollContainer"
+                                @scroll="onMinutesScroll"
+                                class="flex-1 snap-y snap-mandatory overflow-y-auto scroll-smooth py-0 text-center"
+                                style="
+                                    scrollbar-width: none;
+                                    -ms-overflow-style: none;
+                                "
+                            >
+                                <button
+                                    v-for="m in computedMinutesList"
+                                    :key="m"
+                                    type="button"
+                                    @click="selectMinute(m)"
+                                    class="block flex h-12 w-full shrink-0 snap-center items-center justify-center text-sm font-bold transition-colors"
+                                    :class="
+                                        choreTimeMinute === m
+                                            ? 'bg-primary text-primary-foreground font-black'
+                                            : 'hover:bg-muted text-foreground/80'
+                                    "
+                                >
+                                    {{ m }}
+                                </button>
+                            </div>
+                            <!-- AM/PM Column -->
+                            <div
+                                ref="periodScrollContainer"
+                                @scroll="onPeriodScroll"
+                                class="w-20 snap-y snap-mandatory overflow-y-auto scroll-smooth py-0 text-center"
+                                style="
+                                    scrollbar-width: none;
+                                    -ms-overflow-style: none;
+                                "
+                            >
+                                <button
+                                    v-for="p in ['AM', 'PM']"
+                                    :key="p"
+                                    type="button"
+                                    @click="selectPeriod(p)"
+                                    class="block flex h-12 w-full shrink-0 snap-center items-center justify-center text-xs font-black transition-colors"
+                                    :class="
+                                        choreTimePeriod === p
+                                            ? 'bg-primary text-primary-foreground font-black'
+                                            : 'hover:bg-muted text-foreground/80'
+                                    "
+                                >
+                                    {{ p }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Days -->
@@ -1416,189 +2267,49 @@ const groupedChores = computed(() => {
                         :key="label.id"
                         class="bg-muted/40 rounded-xl p-3"
                     >
-                        <!-- Edit mode -->
-                        <template v-if="editingLabel?.id === label.id">
-                            <div class="flex flex-col gap-2">
-                                <Input
-                                    v-model="newLabelName"
-                                    placeholder="Label name"
-                                />
-                                <!-- Label reward switcher -->
-                                <div
-                                    class="bg-muted flex w-fit gap-1 rounded-xl p-1"
-                                >
-                                    <button
-                                        type="button"
-                                        @click="
-                                            labelRewardType = 'monetary'
-                                            labelTextReward = ''
-                                        "
-                                        class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
-                                        :class="
-                                            labelRewardType === 'monetary'
-                                                ? 'bg-background shadow'
-                                                : 'text-muted-foreground'
-                                        "
-                                    >
-                                        <DollarSign class="h-3.5 w-3.5" /> Money
-                                    </button>
-                                    <button
-                                        type="button"
-                                        @click="
-                                            labelRewardType = 'text'
-                                            labelMonetaryAmount = ''
-                                        "
-                                        class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
-                                        :class="
-                                            labelRewardType === 'text'
-                                                ? 'bg-background shadow'
-                                                : 'text-muted-foreground'
-                                        "
-                                    >
-                                        <Gift class="h-3.5 w-3.5" /> Other
-                                    </button>
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="font-bold">
+                                    {{ label.name }}
                                 </div>
                                 <div
-                                    v-if="labelRewardType === 'monetary'"
-                                    class="relative"
+                                    v-if="label.reward"
+                                    class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
                                 >
-                                    <span
-                                        class="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold"
-                                        >$</span
-                                    >
-                                    <Input
-                                        v-model="labelMonetaryAmount"
-                                        type="number"
-                                        min="0"
-                                        step="0.25"
-                                        placeholder="0.00"
-                                        class="pl-7"
+                                    <component
+                                        :is="
+                                            rewardIsMonetary(label.reward)
+                                                ? DollarSign
+                                                : Gift
+                                        "
+                                        class="h-3 w-3"
                                     />
-                                </div>
-                                <Input
-                                    v-else
-                                    v-model="labelTextReward"
-                                    placeholder="e.g. Movie night"
-                                />
-                                <div class="flex justify-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        @click="cancelEditLabel"
-                                        >Cancel</Button
-                                    >
-                                    <Button size="sm" @click="saveLabel"
-                                        >Save</Button
-                                    >
+                                    {{ formatRewardText(label.reward) }}
                                 </div>
                             </div>
-                        </template>
-                        <!-- View mode -->
-                        <template v-else>
-                            <div
-                                class="flex items-center justify-between gap-3"
-                            >
-                                <div>
-                                    <div class="font-bold">
-                                        {{ label.name }}
-                                    </div>
-                                    <div
-                                        v-if="label.reward"
-                                        class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
-                                    >
-                                        <component
-                                            :is="
-                                                rewardIsMonetary(label.reward)
-                                                    ? DollarSign
-                                                    : Gift
-                                            "
-                                            class="h-3 w-3"
-                                        />
-                                        {{ label.reward }}
-                                    </div>
-                                </div>
-                                <div class="flex shrink-0 gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="h-8 w-8 rounded-full"
-                                        @click="startEditLabel(label)"
-                                        ><Edit2 class="h-3.5 w-3.5"
-                                    /></Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        class="h-8 w-8 rounded-full text-red-500 hover:bg-red-50"
-                                        @click="deleteLabel(label)"
-                                        ><Trash2 class="h-3.5 w-3.5"
-                                    /></Button>
-                                </div>
+                            <div class="flex shrink-0 gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-8 w-8 rounded-full"
+                                    @click="startEditLabel(label)"
+                                    ><Edit2 class="h-3.5 w-3.5"
+                                /></Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-8 w-8 rounded-full text-red-500 hover:bg-red-50"
+                                    @click="deleteLabel(label)"
+                                    ><Trash2 class="h-3.5 w-3.5"
+                                /></Button>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Add new label -->
-                <div class="space-y-2 border-t pt-4">
-                    <p class="text-sm font-bold">New Label</p>
-                    <Input v-model="newLabelName" placeholder="Label name" />
-                    <div class="bg-muted flex w-fit gap-1 rounded-xl p-1">
-                        <button
-                            type="button"
-                            @click="
-                                labelRewardType = 'monetary'
-                                labelTextReward = ''
-                            "
-                            class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
-                            :class="
-                                labelRewardType === 'monetary'
-                                    ? 'bg-background shadow'
-                                    : 'text-muted-foreground'
-                            "
-                        >
-                            <DollarSign class="h-3.5 w-3.5" /> Money
-                        </button>
-                        <button
-                            type="button"
-                            @click="
-                                labelRewardType = 'text'
-                                labelMonetaryAmount = ''
-                            "
-                            class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
-                            :class="
-                                labelRewardType === 'text'
-                                    ? 'bg-background shadow'
-                                    : 'text-muted-foreground'
-                            "
-                        >
-                            <Gift class="h-3.5 w-3.5" /> Other
-                        </button>
-                    </div>
-                    <div v-if="labelRewardType === 'monetary'" class="relative">
-                        <span
-                            class="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold"
-                            >$</span
-                        >
-                        <Input
-                            v-model="labelMonetaryAmount"
-                            type="number"
-                            min="0"
-                            step="0.25"
-                            placeholder="0.00"
-                            class="pl-7"
-                        />
-                    </div>
-                    <Input
-                        v-else
-                        v-model="labelTextReward"
-                        placeholder="e.g. Movie night"
-                    />
-                    <Button
-                        @click="saveLabel"
-                        :disabled="!newLabelName.trim()"
-                        class="w-full"
-                    >
-                        <Plus class="mr-2 h-4 w-4" /> Add Label
+                <div class="border-t pt-4">
+                    <Button @click="startCreateLabel" class="w-full font-bold">
+                        <Plus class="mr-2 h-4 w-4" /> Create New Label
                     </Button>
                 </div>
 
@@ -1606,6 +2317,473 @@ const groupedChores = computed(() => {
                     <Button variant="outline" @click="isLabelsModalOpen = false"
                         >Done</Button
                     >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- ── Create / Edit Label Form Modal ── -->
+        <Dialog v-model:open="isLabelFormOpen">
+            <DialogContent class="sm:max-w-[520px]">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Tag class="h-5 w-5" />
+                        {{ editingLabel ? 'Edit Label' : 'Create Label' }}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {{
+                            editingLabel
+                                ? 'Update the details for this label.'
+                                : 'Create a new reusable label for chores.'
+                        }}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="max-h-[60vh] space-y-4 overflow-y-auto py-2 pr-1">
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold">Label Name</label>
+                        <Input
+                            v-model="newLabelName"
+                            placeholder="Label name"
+                        />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold">Reward Type</label>
+                        <div class="bg-muted flex w-fit gap-1 rounded-xl p-1">
+                            <button
+                                type="button"
+                                @click="
+                                    ((labelRewardType = 'monetary'),
+                                    (labelTextReward = ''))
+                                "
+                                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
+                                :class="
+                                    labelRewardType === 'monetary'
+                                        ? 'bg-background shadow'
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                <DollarSign class="h-3.5 w-3.5" /> Money
+                            </button>
+                            <button
+                                type="button"
+                                @click="
+                                    ((labelRewardType = 'text'),
+                                    (labelMonetaryAmount = ''))
+                                "
+                                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
+                                :class="
+                                    labelRewardType === 'text'
+                                        ? 'bg-background shadow'
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                <Gift class="h-3.5 w-3.5" /> Other
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold">Reward Value</label>
+                        <div
+                            v-if="labelRewardType === 'monetary'"
+                            class="relative"
+                        >
+                            <span
+                                class="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 font-bold"
+                                >$</span
+                            >
+                            <Input
+                                v-model="labelMonetaryAmount"
+                                type="number"
+                                min="0"
+                                step="0.25"
+                                placeholder="0.00"
+                                class="pl-7"
+                            />
+                        </div>
+                        <Input
+                            v-else
+                            v-model="labelTextReward"
+                            placeholder="e.g. Movie night"
+                        />
+                    </div>
+
+                    <label
+                        class="mt-1 flex cursor-pointer items-center justify-between py-1.5"
+                        v-if="labelRewardType !== 'monetary'"
+                    >
+                        <span class="text-sm font-bold"
+                            >Bankable (Rolls over to next day)</span
+                        >
+                        <Switch v-model:checked="newLabelIsBankable" />
+                    </label>
+
+                    <div
+                        v-show="newLabelIsBankable"
+                        class="border-primary/20 bg-primary/5 rounded-xl border p-4"
+                    >
+                        <label
+                            class="mb-3 flex cursor-pointer items-center justify-between py-1"
+                        >
+                            <span class="text-primary text-sm font-bold"
+                                >Enable Streak / Bonus Reward</span
+                            >
+                            <Switch v-model:checked="labelHasBonus" />
+                        </label>
+
+                        <div
+                            v-if="labelHasBonus"
+                            class="border-primary/20 grid gap-4 border-l-2 pl-6 transition-all"
+                        >
+                            <div>
+                                <label
+                                    class="text-muted-foreground mb-1.5 block text-xs font-bold tracking-wider uppercase"
+                                    >Required Days (Current Week)</label
+                                >
+                                <div class="flex flex-wrap gap-1">
+                                    <button
+                                        v-for="(day, index) in [
+                                            'Sun',
+                                            'Mon',
+                                            'Tue',
+                                            'Wed',
+                                            'Thu',
+                                            'Fri',
+                                            'Sat',
+                                        ]"
+                                        :key="index"
+                                        type="button"
+                                        @click="toggleLabelBonusDay(index)"
+                                        class="h-8 w-8 rounded-full text-xs font-bold transition-all"
+                                        :class="
+                                            labelBonusDays.includes(index)
+                                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                        "
+                                    >
+                                        {{ day.charAt(0) }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label
+                                    class="text-muted-foreground mb-1 block text-xs font-bold tracking-wider uppercase"
+                                    >Bonus Reward</label
+                                >
+                                <Input
+                                    v-model="labelBonusValue"
+                                    placeholder="e.g. 15 mins stay up late or $5.00"
+                                />
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label
+                                        class="text-muted-foreground mb-1 block text-xs font-bold tracking-wider uppercase"
+                                        >Expires In (Days)</label
+                                    >
+                                    <Input
+                                        v-model="labelBonusExpires"
+                                        type="number"
+                                        min="1"
+                                        placeholder="Never"
+                                    />
+                                </div>
+                                <div class="flex items-center pt-5">
+                                    <label
+                                        class="flex flex-1 cursor-pointer items-center justify-between gap-2"
+                                    >
+                                        <span
+                                            class="text-xs leading-tight font-bold"
+                                            >Require Approval</span
+                                        >
+                                        <Switch
+                                            v-model:checked="
+                                                labelBonusRequiresApproval
+                                            "
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" @click="cancelEditLabel"
+                        >Cancel</Button
+                    >
+                    <Button @click="saveLabel" :disabled="!newLabelName.trim()"
+                        >Save</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Bank Modal -->
+        <Dialog v-model:open="isBankModalOpen">
+            <DialogContent class="max-w-md rounded-3xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Wallet class="h-5 w-5 text-amber-500" />
+                        {{ activeProfile }}'s Bank
+                    </DialogTitle>
+                </DialogHeader>
+                <div class="space-y-6 py-4">
+                    <div
+                        class="rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 p-6 text-center shadow-inner dark:from-amber-900/30 dark:to-orange-900/30"
+                    >
+                        <p
+                            class="mb-1 text-sm font-bold tracking-widest text-amber-600 uppercase dark:text-amber-400"
+                        >
+                            Balance
+                        </p>
+                        <h2
+                            class="text-5xl font-black text-amber-600 dark:text-amber-400"
+                        >
+                            ${{ parseFloat(bankBalance).toFixed(2) }}
+                        </h2>
+                        <Button
+                            v-if="parseFloat(bankBalance) > 0"
+                            size="sm"
+                            variant="outline"
+                            class="mt-4 bg-white/50 dark:bg-black/50"
+                            @click="confirmRedeemReward('monetary', bankBalance)"
+                            >Redeem All</Button
+                        >
+                        <p
+                            v-if="parseFloat(pendingBankBalance) > 0"
+                            class="mt-3 text-xs font-bold text-amber-700/60 dark:text-amber-300/60"
+                        >
+                            + ${{ parseFloat(pendingBankBalance).toFixed(2) }}
+                            Pending Approval
+                        </p>
+                    </div>
+
+                    <div
+                        v-if="
+                            bankTextRewards.length ||
+                            pendingBankTextRewards.length ||
+                            dailyBankTextRewards.length
+                        "
+                        class="space-y-2"
+                    >
+                        <p
+                            v-if="dailyBankTextRewards.length"
+                            class="text-muted-foreground text-sm font-bold tracking-widest uppercase mt-4"
+                        >
+                            Daily Perks (Expires Today)
+                        </p>
+                        <div
+                            v-for="reward in dailyBankTextRewards"
+                            :key="'daily_' + reward.text"
+                            class="bg-green-100/50 flex items-center justify-between rounded-xl p-3 dark:bg-green-900/20"
+                        >
+                            <div class="flex items-center gap-2 font-semibold text-green-700 dark:text-green-400">
+                                <Gift class="h-4 w-4" />
+                                <span>{{ reward.count }}x</span>
+                                <span>{{ reward.text }}</span>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                class="bg-green-200 hover:bg-green-300 text-green-800 dark:bg-green-800 dark:hover:bg-green-700 dark:text-green-100"
+                                @click="confirmRedeemReward('textual', 1, reward.text, true)"
+                                >Redeem</Button
+                            >
+                        </div>
+
+                        <p
+                            v-if="bankTextRewards.length || pendingBankTextRewards.length"
+                            class="text-muted-foreground text-sm font-bold tracking-widest uppercase mt-4"
+                        >
+                            Saved Rewards
+                        </p>
+                        <div
+                            v-for="reward in bankTextRewards"
+                            :key="reward.text"
+                            class="bg-muted/50 flex items-center justify-between rounded-xl p-3"
+                        >
+                            <div class="flex items-center gap-2 font-semibold">
+                                <Gift class="h-4 w-4 text-purple-500" />
+                                <span>{{ reward.count }}x</span>
+                                <span>{{ reward.text }}</span>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="secondary"
+                                @click="confirmRedeemReward('textual', 1, reward.text)"
+                                >Redeem</Button
+                            >
+                        </div>
+                        <div
+                            v-for="reward in pendingBankTextRewards"
+                            :key="'pending_' + reward.text"
+                            class="bg-muted/30 flex items-center justify-between rounded-xl p-3 opacity-60"
+                        >
+                            <div
+                                class="text-muted-foreground flex items-center gap-2 font-semibold"
+                            >
+                                <Gift class="h-4 w-4 text-purple-500/50" />
+                                <span>{{ reward.count }}x</span>
+                                <span>{{ reward.text }}</span>
+                            </div>
+                            <span
+                                class="text-muted-foreground text-xs font-bold"
+                                >Pending Approval</span
+                            >
+                        </div>
+                    </div>
+                    <div
+                        v-if="
+                            !bankTextRewards.length &&
+                            bankBalance <= 0 &&
+                            !pendingBankTextRewards.length &&
+                            pendingBankBalance <= 0 &&
+                            !dailyBankTextRewards.length
+                        "
+                        class="text-muted-foreground py-4 text-center opacity-50"
+                    >
+                        <p class="font-bold">No rewards earned yet.</p>
+                        <p class="text-sm">Complete chores to earn rewards!</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="isBankModalOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Approvals Inbox Modal -->
+        <Dialog v-model:open="isApprovalsModalOpen">
+            <DialogContent
+                class="flex max-h-[80vh] max-w-lg flex-col overflow-hidden rounded-3xl"
+            >
+                <DialogHeader class="shrink-0">
+                    <DialogTitle class="flex items-center gap-2">
+                        <Inbox class="h-5 w-5" /> Pending Approvals
+                    </DialogTitle>
+                    <DialogDescription
+                        >Review completed chores and award
+                        rewards.</DialogDescription
+                    >
+                </DialogHeader>
+
+                <div class="flex-1 space-y-3 overflow-y-auto py-4 pr-2">
+                    <div
+                        v-if="!pendingApprovals.length"
+                        class="text-muted-foreground py-8 text-center opacity-50"
+                    >
+                        <CheckCircle2 class="mx-auto mb-2 h-12 w-12" />
+                        <p class="font-bold">All caught up!</p>
+                        <p class="text-sm">No pending chores to approve.</p>
+                    </div>
+                    <div
+                        v-for="completion in pendingApprovals"
+                        :key="completion.id"
+                        class="bg-muted/40 flex flex-col gap-3 rounded-2xl border p-4 shadow-sm"
+                    >
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="text-lg font-bold">
+                                    {{ completion.chore.title }}
+                                </h4>
+                                <p
+                                    class="text-muted-foreground flex items-center gap-2 text-sm font-semibold"
+                                >
+                                    <span
+                                        >Profile:
+                                        {{ completion.chore.profile }}</span
+                                    >
+                                    &bull;
+                                    <span>Date: {{ completion.date }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="flex flex-col gap-1.5"
+                            v-if="
+                                completion.awarded_value !== null &&
+                                completion.awarded_value !== ''
+                            "
+                        >
+                            <label
+                                class="text-muted-foreground text-xs font-bold uppercase"
+                                >Reward Value</label
+                            >
+                            <Input
+                                v-model="completion.awarded_value"
+                                class="bg-background font-bold"
+                            />
+                        </div>
+                        <div
+                            v-else
+                            class="text-muted-foreground bg-background/50 rounded-lg border p-2 text-center text-sm italic"
+                        >
+                            No reward attached to this chore.
+                        </div>
+
+                        <div class="mt-2 flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                class="text-red-500 hover:bg-red-50 hover:text-red-600"
+                                @click="processApproval(completion, 'reject')"
+                            >
+                                <X class="mr-1 h-4 w-4" /> Reject
+                            </Button>
+                            <Button
+                                class="bg-green-500 text-white shadow-md hover:bg-green-600"
+                                @click="processApproval(completion, 'approve')"
+                            >
+                                <Check class="mr-1 h-4 w-4" /> Approve
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter class="mt-2 shrink-0">
+                    <Button
+                        variant="outline"
+                        @click="isApprovalsModalOpen = false"
+                        >Close</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Redeem Confirmation Modal -->
+        <Dialog v-model:open="isRedeemModalOpen">
+            <DialogContent class="sm:max-w-[400px] rounded-3xl">
+                <DialogHeader>
+                    <DialogTitle class="flex items-center gap-2">
+                        <Gift class="h-5 w-5 text-purple-500" v-if="redeemPayload?.type === 'textual'" />
+                        <DollarSign class="h-5 w-5 text-amber-500" v-else />
+                        Redeem Reward
+                    </DialogTitle>
+                    <DialogDescription class="sr-only">Confirm redemption of the selected reward.</DialogDescription>
+                </DialogHeader>
+                <div class="py-6 text-center space-y-4">
+                    <p class="text-lg font-medium text-muted-foreground">
+                        Are you sure you want to redeem:
+                    </p>
+                    <div class="bg-muted/50 rounded-2xl p-4 inline-block mx-auto min-w-[200px]">
+                        <p class="text-2xl font-black" :class="redeemPayload?.type === 'monetary' ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400'">
+                            {{ redeemPayload?.type === 'monetary' ? '$' + parseFloat(redeemPayload.amount).toFixed(2) : redeemPayload?.text }}
+                        </p>
+                    </div>
+                    <p class="text-sm font-semibold text-muted-foreground">
+                        This action cannot be undone.
+                    </p>
+                </div>
+                <DialogFooter class="flex gap-2">
+                    <Button variant="outline" class="flex-1" @click="isRedeemModalOpen = false">Cancel</Button>
+                    <Button class="flex-1" :class="redeemPayload?.type === 'monetary' ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'" @click="executeRedeemReward">
+                        Confirm
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

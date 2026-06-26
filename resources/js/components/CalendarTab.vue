@@ -6,6 +6,7 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import listPlugin from '@fullcalendar/list'
 import luxonPlugin from '@fullcalendar/luxon3'
 
 import {
@@ -41,6 +42,7 @@ import {
     RefreshCw,
     Star,
     GripVertical,
+    EyeOff,
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -201,7 +203,7 @@ watch(
 // Calendar Configuration
 const calendarOptions = ref({
     timeZone: props.localTimezone,
-    plugins: [luxonPlugin, dayGridPlugin, timeGridPlugin, interactionPlugin],
+    plugins: [luxonPlugin, dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
     initialView: 'twoWeekView',
     views: {
         twoWeekView: {
@@ -228,6 +230,9 @@ const calendarOptions = ref({
             scrollTime: new Date().getHours() + ':00:00',
             slotMinTime: '06:00:00',
             slotMaxTime: '23:00:00',
+        },
+        listWeek: {
+            buttonText: 'Agenda',
         },
     },
     headerToolbar: false, // We build our own
@@ -326,11 +331,23 @@ watch(
 
 const fullCalendar = ref(null)
 const currentViewTitle = ref('')
+const currentViewType = ref('')
 
 const next = () => fullCalendar.value.getApi().next()
 const prev = () => fullCalendar.value.getApi().prev()
 const today = () => fullCalendar.value.getApi().today()
 const changeView = (view) => fullCalendar.value.getApi().changeView(view)
+
+const todayButtonLabel = computed(() => {
+    switch (currentViewType.value) {
+        case 'dayGridMonth': return 'This Month';
+        case 'timeGridWeek':
+        case 'listWeek': return 'This Week';
+        case 'twoWeekView': return 'Current';
+        case 'timeGridDay':
+        default: return 'Today';
+    }
+})
 
 const selectProfile = (name) => {
     emit('update:activeProfile', name)
@@ -339,6 +356,7 @@ const selectProfile = (name) => {
 
 function handleDatesSet(info) {
     currentViewTitle.value = info.view.title
+    currentViewType.value = info.view.type
     emit('range-changed', { start: info.startStr, end: info.endStr })
 }
 
@@ -644,8 +662,20 @@ const handleDocumentClick = (e) => {
     }
 }
 
+const funFacts = ref({ national_day: 'Loading...', fun_fact: 'Loading...', date_formatted: '', word_of_the_day: { en: 'Loading...', es: '...', fr: '...' } })
+const isFunFactHidden = ref(false)
+const fetchFunFacts = async () => {
+    try {
+        const response = await axios.get('/api/fun-facts')
+        funFacts.value = response.data
+    } catch (e) {
+        console.error('Failed to fetch fun facts', e)
+    }
+}
+
 onMounted(() => {
     document.addEventListener('click', handleDocumentClick)
+    fetchFunFacts()
 })
 
 onUnmounted(() => {
@@ -790,7 +820,7 @@ onUnmounted(() => {
                         variant="ghost"
                         @click="today"
                         class="h-10 rounded-xl px-4 text-[10px] font-black tracking-widest uppercase"
-                        >Today</Button
+                        >{{ todayButtonLabel }}</Button
                     >
                     <Button
                         variant="ghost"
@@ -818,6 +848,7 @@ onUnmounted(() => {
                             { id: 'twoWeekView', label: '2 Weeks' },
                             { id: 'timeGridWeek', label: 'Week' },
                             { id: 'timeGridDay', label: 'Day' },
+                            { id: 'listWeek', label: 'Agenda' },
                         ]"
                         :key="view.id"
                         variant="ghost"
@@ -835,8 +866,8 @@ onUnmounted(() => {
                     :class="[
                         'h-12 w-12 rounded-2xl transition-all',
                         isSidebarOpen
-                            ? 'bg-primary text-white'
-                            : 'border border-white/10 bg-white/20 dark:bg-white/5',
+                            ? 'bg-black/80 text-white dark:bg-white/10 dark:text-white shadow-md'
+                            : 'border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10',
                     ]"
                 >
                     <component
@@ -957,6 +988,54 @@ onUnmounted(() => {
                                         Clear Schedule
                                     </p>
                                 </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Fun Facts Card -->
+                    <Card
+                        class="flex shrink-0 flex-col overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-none backdrop-blur-3xl dark:bg-white/5"
+                    >
+                        <CardHeader class="shrink-0 p-6 pb-2">
+                            <CardTitle
+                                class="text-primary flex items-center gap-3 text-xl font-black tracking-tight uppercase italic"
+                            >
+                                <Star class="h-5 w-5" />
+                                Fun Facts
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent class="p-6 pt-0 space-y-4">
+                            <div v-if="funFacts.national_day" class="rounded-[1.5rem] bg-white/40 dark:bg-white/5 p-4 space-y-1 transition-all hover:bg-white/80 dark:hover:bg-white/10">
+                                <p class="text-[9px] font-black tracking-widest text-primary uppercase opacity-70">{{ funFacts.date_formatted || 'TODAY' }}</p>
+                                <p class="text-sm font-black leading-tight text-foreground">{{ funFacts.national_day }}</p>
+                            </div>
+                            <div class="rounded-[1.5rem] bg-white/40 dark:bg-white/5 p-4 space-y-1 transition-all hover:bg-white/80 dark:hover:bg-white/10 group">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[9px] font-black tracking-widest text-primary uppercase opacity-70">
+                                        Did You Know?
+                                    </p>
+                                    <button 
+                                        @click="isFunFactHidden = !isFunFactHidden" 
+                                        class="opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-red-500"
+                                        title="Hide Fact"
+                                    >
+                                        <EyeOff class="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <p v-if="!isFunFactHidden" class="text-xs font-bold leading-tight opacity-90 text-foreground">{{ funFacts.fun_fact }}</p>
+                                <p v-else class="text-xs italic leading-tight opacity-50 text-foreground">Fact hidden</p>
+                            </div>
+                            <div class="rounded-[1.5rem] bg-white/40 dark:bg-white/5 p-4 space-y-1 transition-all hover:bg-white/80 dark:hover:bg-white/10">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[9px] font-black tracking-widest text-primary uppercase opacity-70">Word of the Day</p>
+                                    <p class="text-[8px] font-black tracking-widest uppercase opacity-40">EN / FR / ES</p>
+                                </div>
+                                <p class="text-sm font-black leading-tight text-foreground">
+                                    <span v-if="funFacts.word_of_the_day.en !== 'Loading...'">
+                                        {{ funFacts.word_of_the_day.en }} / {{ funFacts.word_of_the_day.fr }} / {{ funFacts.word_of_the_day.es }}
+                                    </span>
+                                    <span v-else>Loading...</span>
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

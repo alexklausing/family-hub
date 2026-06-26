@@ -7,11 +7,12 @@
 - **Composition over Inheritance:** Prefer small, focused Vue composables and Laravel services over deep inheritance trees.
 - **Component Ownership:** All UI components from `shadcn-vue` must live in `resources/js/components/ui/`. Modification of these components is encouraged to match the touch-screen requirements.
 
-## 2. Touch UI Standards (ViewSonic TD2430)
+## 2. Touch UI Standards (Dell P2418HT)
 
 - **Target Size:** Interactive elements (buttons, inputs, tabs) must have a minimum touch target of 44x44px.
 - **Visual Feedback:** All touch interactions must provide immediate visual feedback (active states, ripples, or transitions).
 - **Kitchen Visibility:** Typography for "Kitchen Mode" recipes should be readable from 5 feet away (minimum 1.25rem/20px).
+- **Orientation Resilience:** The dashboard is mounted horizontally, but MUST use flex/grid wrapping to ensure it adapts perfectly to a vertical orientation if rotated.
 
 ## 3. Engineering Quality
 

@@ -14,6 +14,7 @@ class Chore extends Model
         'is_active',
         'order',
         'reward',
+        'is_bankable',
         'label_id',
     ];
 
@@ -30,5 +31,10 @@ class Chore extends Model
     public function label()
     {
         return $this->belongsTo(Label::class);
+    }
+
+    public function bonusReward()
+    {
+        return $this->hasOne(BonusReward::class);
     }
 }

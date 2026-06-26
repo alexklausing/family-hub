@@ -46,6 +46,7 @@ class ChoreSeeder extends Seeder
         $screenTimeList = Label::create([
             'name' => 'Screen Time List',
             'reward' => '30 min screen time',
+            'is_bankable' => false,
         ]);
 
         $weekendDeepClean = Label::create([

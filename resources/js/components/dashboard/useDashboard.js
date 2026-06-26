@@ -3,7 +3,6 @@ import axios from 'axios'
 
 export function useDashboard() {
     // UI State
-    const isEditMode = ref(false)
     const isSettingsDialogOpen = ref(false)
     const isSyncModalOpen = ref(false)
     const syncOption = ref('current')
@@ -188,10 +187,6 @@ export function useDashboard() {
         }
     }
 
-    const resetLayout = () => {
-        isEditMode.value = false
-    }
-
     onMounted(() => {
         loadFilters()
         fetchEvents()
@@ -202,7 +197,6 @@ export function useDashboard() {
     })
 
     return {
-        isEditMode,
         isSettingsDialogOpen,
         isSyncModalOpen,
         syncOption,
@@ -221,7 +215,6 @@ export function useDashboard() {
         fetchEvents,
         toggleCalendar,
         handleSync,
-        resetLayout,
         defaultCalendarId,
     }
 }

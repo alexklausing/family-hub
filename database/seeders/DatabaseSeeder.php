@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Calendar;
 use App\Models\Profile;
 use App\Models\Tab;
+use App\Services\Calendar\AppleCalendarService;
 use App\Services\Calendar\CalendarManager;
 use App\Services\PaprikaSyncService;
 use Illuminate\Database\Seeder;
@@ -16,7 +17,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $profileNames = ['Family', 'Dad', 'Mom', 'Kids'];
+        $profileNames = ['Family', 'Alex', 'Sarah', 'Emily', 'Henry'];
 
         foreach ($profileNames as $name) {
             $this->command->info("Initializing profile: {$name}");
@@ -33,6 +34,9 @@ class DatabaseSeeder extends Seeder
                 $this->seedFamilyCalendars($tab);
             }
         }
+
+        // Seed Chores
+        $this->call(ChoreSeeder::class);
 
         // Trigger Synchronous Syncs
         $this->command->info('Starting initial Paprika recipe sync...');
@@ -86,13 +90,32 @@ class DatabaseSeeder extends Seeder
         ];
 
         if (! empty(config('services.apple.email'))) {
-            $calendars[] = [
-                'provider' => 'apple',
-                'external_id' => 'apple_main',
-                'name' => 'Apple',
-                'color' => '#9333ea', // Purple for Apple calendars
-                'credentials' => [],
-            ];
+            try {
+                $appleService = app(AppleCalendarService::class);
+                $appleCalendars = $appleService->getCalendars(config('services.apple.email'), config('services.apple.password'));
+
+                foreach ($appleCalendars as $appleCalendar) {
+                    if (str_contains($appleCalendar['name'], 'Personal')) {
+                        $calendars[] = [
+                            'provider' => 'apple',
+                            'external_id' => 'apple_personal',
+                            'name' => 'Personal',
+                            'color' => '#3b82f6', // Blue for Personal
+                            'credentials' => ['path' => $appleCalendar['path']],
+                        ];
+                    } elseif (str_contains($appleCalendar['name'], 'A&S Family Calendar')) {
+                        $calendars[] = [
+                            'provider' => 'apple',
+                            'external_id' => 'apple_family',
+                            'name' => 'A&S Family Calendar',
+                            'color' => '#9333ea', // Purple for Family
+                            'credentials' => ['path' => $appleCalendar['path']],
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                $this->command->error('Failed to fetch Apple Calendars: '.$e->getMessage());
+            }
         }
 
         foreach ($calendars as $c) {
