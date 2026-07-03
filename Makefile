@@ -19,6 +19,8 @@ buildFresh: down
 	npm install
 	@echo "🌱 Migrating..."
 	$(SAIL_CMD) artisan migrate
+	@echo "🔗 Linking storage..."
+	$(SAIL_CMD) artisan storage:link
 	@echo "✅ Setup Complete! Run 'make vite' to start the frontend."
 
 # Start containers
@@ -130,6 +132,23 @@ diagnose:
 
 .PHONY: buildFresh up down vite ssh test art refresh reset tinker log migrate diagnose seed
 
+
 cli:
 	agy
 	
+
+# Pull latest changes and sync the environment
+deploy:
+	@echo "⬇️ Pulling latest code from GitHub..."
+	git pull origin main
+	@echo "📦 Syncing PHP dependencies..."
+	$(SAIL_CMD) composer install --no-interaction --prefer-dist --optimize-autoloader
+	@echo "📦 Syncing Node dependencies..."
+	npm install
+	@echo "🌱 Running database migrations..."
+	$(SAIL_CMD) artisan migrate --force
+	@echo "🧹 Flushing application caches..."
+	$(SAIL_CMD) artisan optimize:clear
+	@echo "🔗 Linking storage..."
+	$(SAIL_CMD) artisan storage:link
+	@echo "✅ Deployment complete! Hit F5 on the kiosk to refresh."
