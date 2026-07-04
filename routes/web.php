@@ -10,6 +10,7 @@ use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\RewardLedgerController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Cache;
 
 Route::get('/', function () {
     return view('welcome');
@@ -55,3 +56,16 @@ Route::delete('/api/labels/{label}', [LabelController::class, 'destroy']);
 
 Route::get('/api/rewards/bank', [RewardLedgerController::class, 'index']);
 Route::post('/api/rewards/redeem', [RewardLedgerController::class, 'redeem']);
+
+Route::get('/api/kiosk/version', function () {
+    return response()->json(['version' => Cache::get('kiosk_version', 1)]);
+});
+
+Route::post('/api/kiosk/refresh', function () {
+    if (Cache::has('kiosk_version')) {
+        Cache::increment('kiosk_version');
+    } else {
+        Cache::put('kiosk_version', 2);
+    }
+    return response()->json(['message' => 'Refresh signal sent']);
+});

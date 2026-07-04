@@ -77,12 +77,24 @@ const devSettings = computed({
 
 const activeTab = ref('general')
 
+import axios from 'axios'
+
 const toggleAllDeveloperFeatures = () => {
     // If testWeatherAlerts is currently true, set all to false. Otherwise set all to true.
     const newState = !devSettings.value.testWeatherAlerts
     devSettings.value = {
         ...devSettings.value,
         testWeatherAlerts: newState
+    }
+}
+
+const refreshKiosk = async () => {
+    try {
+        await axios.post('/api/kiosk/refresh')
+        // Give some visual feedback if desired, or just close
+        isOpen.value = false
+    } catch (e) {
+        console.error('Failed to trigger refresh:', e)
     }
 }
 </script>
@@ -255,6 +267,22 @@ const toggleAllDeveloperFeatures = () => {
                                 <div>
                                     <h4 class="group-hover:text-primary text-xl font-black tracking-tight transition-colors">Data Refresh</h4>
                                     <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">External Sources</p>
+                                </div>
+                            </div>
+                            <ChevronRight class="h-8 w-8 opacity-20 transition-all group-hover:opacity-100 shrink-0" />
+                        </div>
+
+                        <div
+                            @click="refreshKiosk"
+                            class="bg-muted/20 hover:bg-muted/40 group flex w-full cursor-pointer items-center justify-between rounded-[2rem] border border-white/5 p-8 text-left transition-all"
+                        >
+                            <div class="flex items-center gap-5">
+                                <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                    <Monitor class="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <h4 class="group-hover:text-primary text-xl font-black tracking-tight transition-colors">Remote Screen Refresh</h4>
+                                    <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Reload All Physical Kiosks</p>
                                 </div>
                             </div>
                             <ChevronRight class="h-8 w-8 opacity-20 transition-all group-hover:opacity-100 shrink-0" />

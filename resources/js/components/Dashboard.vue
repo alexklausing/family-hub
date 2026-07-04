@@ -83,18 +83,9 @@ watch(developerSettings, (newVal) => {
 watch(weatherData, updateTheme, { deep: true })
 let themeInterval = null
 
-onMounted(() => {
-    fetchWeather()
-    setInterval(() => fetchWeather(true), 600000)
-    
-    updateTheme()
-    themeInterval = setInterval(updateTheme, 60000)
-})
+import axios from 'axios'
 
-onUnmounted(() => {
-    if (themeInterval) clearInterval(themeInterval)
-})
-
+// Global Dashboard Logic & State
 const isBannerDismissed = ref(false)
 const isMuteModalOpen = ref(false)
 const mutedUntil = ref(parseInt(localStorage.getItem('weather_muted_until') || '0'))
@@ -116,6 +107,39 @@ const muteBanner = (minutes) => {
     localStorage.setItem('weather_muted_until', muteTime.toString())
     isMuteModalOpen.value = false
 }
+
+// Kiosk Auto-Refresh Logic
+const kioskVersion = ref(null)
+let kioskInterval = null
+
+onMounted(() => {
+    fetchWeather()
+    setInterval(() => fetchWeather(true), 600000)
+    
+    updateTheme()
+    themeInterval = setInterval(updateTheme, 60000)
+
+    // Kiosk Version Polling (Check every 15 seconds)
+    axios.get('/api/kiosk/version').then(res => {
+        kioskVersion.value = res.data.version
+    }).catch(() => {})
+
+    kioskInterval = setInterval(async () => {
+        try {
+            const res = await axios.get('/api/kiosk/version')
+            if (kioskVersion.value !== null && res.data.version !== kioskVersion.value) {
+                window.location.reload(true)
+            }
+        } catch (e) {
+            // Silently ignore network errors to prevent console spam
+        }
+    }, 15000)
+})
+
+onUnmounted(() => {
+    if (themeInterval) clearInterval(themeInterval)
+    if (kioskInterval) clearInterval(kioskInterval)
+})
 
 const {
     isSettingsDialogOpen,

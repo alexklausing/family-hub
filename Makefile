@@ -153,4 +153,6 @@ deploy:
 	$(SAIL_CMD) artisan optimize:clear
 	@echo "🔗 Linking storage..."
 	$(SAIL_CMD) artisan storage:link
-	@echo "✅ Deployment complete! Hit F5 on the kiosk to refresh."
+	@echo "🔄 Sending reload signal to kiosks..."
+	$(SAIL_CMD) artisan eval "Cache::put('kiosk_version', Cache::get('kiosk_version', 1) + 1);"
+	@echo "✅ Deployment complete! Kiosks will refresh automatically within 15 seconds."
