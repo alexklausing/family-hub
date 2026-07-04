@@ -15,6 +15,7 @@ import { useDashboard } from './dashboard/useDashboard'
 import DashboardHeader from './dashboard/DashboardHeader.vue'
 import SettingsDialog from './dashboard/SettingsDialog.vue'
 import SyncDialog from './dashboard/SyncDialog.vue'
+import VirtualKeyboard from './VirtualKeyboard.vue'
 import { useWeather } from '@/composables/useWeather'
 
 const { alerts, fetchWeather, weatherData } = useWeather()
@@ -328,6 +329,9 @@ const handleSyncRequest = (option) => {
                 </div>
             </DialogContent>
         </Dialog>
+
+        <!-- Global Virtual Keyboard -->
+        <VirtualKeyboard />
     </div>
 </template>
 

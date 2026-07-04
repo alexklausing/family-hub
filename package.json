@@ -48,6 +48,7 @@
         "radix-vue": "^1.9.17",
         "reka-ui": "^2.9.10",
         "shadcn-vue": "^2.7.4",
+        "simple-keyboard": "^3.8.157",
         "tailwind-merge": "^3.6.0",
         "vue": "^3.5.38",
         "vuedraggable": "^4.1.0"
