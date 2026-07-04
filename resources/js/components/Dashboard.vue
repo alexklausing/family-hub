@@ -70,10 +70,12 @@ watch(defaultRadarLayers, (newVal) => {
     localStorage.setItem('defaultRadarLayers', JSON.stringify(newVal))
 }, { deep: true })
 
-const developerSettings = ref(JSON.parse(localStorage.getItem('developerSettings') || 'null') || {
+const savedSettings = JSON.parse(localStorage.getItem('developerSettings') || 'null')
+const developerSettings = ref({
     masterToggle: false,
     testWeatherAlerts: false,
     hideCursor: false,
+    ...(savedSettings || {})
 })
 provide('developerSettings', developerSettings)
 
