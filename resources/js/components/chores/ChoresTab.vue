@@ -33,6 +33,7 @@ import {
     Wallet,
     Inbox,
     Clock,
+    Delete,
 } from 'lucide-vue-next'
 
 const props = defineProps({ profiles: Array, activeProfile: String })
@@ -660,6 +661,16 @@ const verifyPin = () => {
     } else {
         pinError.value = true
         enteredPin.value = ''
+    }
+}
+
+const appendPin = (num) => {
+    pinError.value = false
+    if (enteredPin.value.length < 4) {
+        enteredPin.value += num
+    }
+    if (enteredPin.value.length === 4) {
+        verifyPin()
     }
 }
 
@@ -1603,34 +1614,65 @@ watch(
 
         <!-- ── PIN Modal ── -->
         <Dialog v-model:open="isPinPromptOpen">
-            <DialogContent class="sm:max-w-[360px]">
+            <DialogContent class="sm:max-w-[360px] rounded-[2.5rem] bg-white/95 p-8 backdrop-blur-3xl dark:bg-black/95">
                 <DialogHeader>
-                    <DialogTitle>Parental Passcode</DialogTitle>
-                    <DialogDescription
-                        >Enter the passcode to manage chores.</DialogDescription
-                    >
+                    <DialogTitle class="text-center text-2xl font-black uppercase">Parental Passcode</DialogTitle>
+                    <DialogDescription class="text-center font-bold">
+                        Enter the passcode to manage chores.
+                    </DialogDescription>
                 </DialogHeader>
-                <div class="py-6">
-                    <Input
-                        v-model="enteredPin"
-                        type="password"
-                        placeholder="• • • •"
-                        class="text-center text-2xl tracking-[0.5em]"
-                        maxlength="4"
-                        @keyup.enter="verifyPin"
-                    />
-                    <p
-                        v-if="pinError"
-                        class="mt-2 text-center text-sm font-bold text-red-500"
-                    >
-                        Incorrect PIN.
+                <div class="py-4">
+                    <!-- PIN Dots Display -->
+                    <div class="mb-8 flex justify-center gap-4">
+                        <div 
+                            v-for="i in 4" 
+                            :key="i"
+                            class="h-5 w-5 rounded-full transition-all duration-200"
+                            :class="enteredPin.length >= i ? 'bg-primary scale-110' : 'bg-primary/20 dark:bg-white/10 scale-100'"
+                        ></div>
+                    </div>
+                    <p v-if="pinError" class="mb-4 text-center text-sm font-black uppercase tracking-widest text-red-500 animate-pulse">
+                        Incorrect PIN
                     </p>
+
+                    <!-- Numeric Keypad -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <Button 
+                            v-for="num in [1, 2, 3, 4, 5, 6, 7, 8, 9]" 
+                            :key="num"
+                            variant="outline"
+                            class="h-16 rounded-2xl text-2xl font-black border-2 hover:bg-black/5 dark:hover:bg-white/5"
+                            @click="appendPin(num.toString())"
+                        >
+                            {{ num }}
+                        </Button>
+                        <Button 
+                            variant="ghost"
+                            class="h-16 rounded-2xl text-sm font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                            @click="enteredPin = ''"
+                        >
+                            Clear
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            class="h-16 rounded-2xl text-2xl font-black border-2 hover:bg-black/5 dark:hover:bg-white/5"
+                            @click="appendPin('0')"
+                        >
+                            0
+                        </Button>
+                        <Button 
+                            variant="ghost"
+                            class="h-16 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5"
+                            @click="enteredPin = enteredPin.slice(0, -1)"
+                        >
+                            <Delete class="h-6 w-6" />
+                        </Button>
+                    </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="outline" @click="isPinPromptOpen = false"
-                        >Cancel</Button
-                    >
-                    <Button @click="verifyPin">Unlock</Button>
+                <DialogFooter class="sm:justify-center">
+                    <Button variant="outline" class="w-full rounded-2xl h-12 font-black uppercase tracking-widest" @click="isPinPromptOpen = false">
+                        Cancel
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
