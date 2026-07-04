@@ -129,21 +129,47 @@ class AppleCalendarService
 
             $calendars = $this->client->propFind($calendarHomeSet, [
                 '{DAV:}displayname',
+                '{urn:ietf:params:xml:ns:caldav}calendar-description',
             ], 1);
 
             $result = [];
             foreach ($calendars as $path => $props) {
+                // Skip the parent calendar-home-set container itself
+                if (rtrim($path, '/') === rtrim($calendarHomeSet, '/')) {
+                    continue;
+                }
+
+                $basename = basename(rtrim($path, '/'));
+                // Skip internal CalDAV collections
+                if (in_array(strtolower($basename), ['inbox', 'outbox', 'notification'])) {
+                    continue;
+                }
+
+                $name = null;
                 if (isset($props['{DAV:}displayname'])) {
                     $name = is_array($props['{DAV:}displayname']) && isset($props['{DAV:}displayname'][0]['value'])
                         ? $props['{DAV:}displayname'][0]['value']
                         : $props['{DAV:}displayname'];
+                }
 
-                    if (is_string($name) && ! empty($name)) {
-                        $result[] = [
-                            'name' => $name,
-                            'path' => $path,
-                        ];
+                if (empty($name) && isset($props['{urn:ietf:params:xml:ns:caldav}calendar-description'])) {
+                    $desc = is_array($props['{urn:ietf:params:xml:ns:caldav}calendar-description']) && isset($props['{urn:ietf:params:xml:ns:caldav}calendar-description'][0]['value'])
+                        ? $props['{urn:ietf:params:xml:ns:caldav}calendar-description'][0]['value']
+                        : $props['{urn:ietf:params:xml:ns:caldav}calendar-description'];
+                    if (is_string($desc) && !empty($desc)) {
+                        $name = $desc;
                     }
+                }
+
+                if (empty($name)) {
+                    $name = ucfirst($basename); // Fallback to folder name
+                }
+
+                if (is_string($name) && ! empty($name)) {
+                    $result[] = [
+                        'name' => $name,
+                        'path' => $path,
+                    ];
                 }
             }
 
