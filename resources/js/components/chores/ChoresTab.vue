@@ -45,7 +45,7 @@ const isLoading = ref(false)
 const labels = ref([])
 
 // PIN / Unlock
-const PARENTAL_PIN = '1234'
+const PARENTAL_PIN = import.meta.env.VITE_PARENTAL_PIN || '1234'
 const isUnlocked = ref(false)
 const isPinPromptOpen = ref(false)
 const enteredPin = ref('')
