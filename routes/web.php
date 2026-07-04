@@ -24,6 +24,7 @@ Route::post('/api/calendars', [CalendarManagementController::class, 'store']);
 Route::put('/api/calendars/{calendar}', [CalendarManagementController::class, 'update']);
 Route::delete('/api/calendars/{calendar}', [CalendarManagementController::class, 'destroy']);
 Route::post('/api/profiles/{name}/default-calendar', [CalendarManagementController::class, 'setDefaultCalendar']);
+Route::post('/api/profiles/{name}/visible-calendars', [CalendarManagementController::class, 'updateVisibleCalendars']);
 
 Route::get('/api/fun-facts', [FunFactsController::class, 'index']);
 

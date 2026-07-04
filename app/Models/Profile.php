@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'is_default', 'order', 'default_calendar_id'])]
+#[Fillable(['name', 'is_default', 'order', 'default_calendar_id', 'visible_calendars'])]
 class Profile extends Model
 {
     use HasFactory;
@@ -18,6 +18,7 @@ class Profile extends Model
         return [
             'is_default' => 'boolean',
             'order' => 'integer',
+            'visible_calendars' => 'array',
         ];
     }
 

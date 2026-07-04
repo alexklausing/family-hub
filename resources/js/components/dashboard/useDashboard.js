@@ -103,19 +103,31 @@ export function useDashboard() {
 
             defaultCalendarId.value = response.data.default_calendar_id || null
 
+            const dbProfiles = response.data.profiles
+            let profileWasNull = false
+            if (dbProfiles) {
+                dbProfiles.forEach((p) => {
+                    if (p.visible_calendars !== null) {
+                        filtersByProfile.value[p.name] = p.visible_calendars.map(Number)
+                    } else if (p.name === activeProfile.value) {
+                        profileWasNull = true
+                    }
+                })
+            }
+
             // Automatically enable newly added calendars
             const knownIds = filtersByProfile.value[activeProfile.value] || []
             const fetchedIds = availableCalendars.value.map((c) => Number(c.id))
-            if (knownIds.length === 0) {
+            
+            if (profileWasNull && knownIds.length === 0) {
+                // First time ever loading this profile, enable all
                 filtersByProfile.value[activeProfile.value] = fetchedIds
             } else {
-                const newIds = fetchedIds.filter((id) => !knownIds.includes(id))
-                if (newIds.length > 0) {
-                    filtersByProfile.value[activeProfile.value] = [
-                        ...knownIds,
-                        ...newIds,
-                    ]
-                }
+                // If the user already configured this profile, only auto-enable brand NEW calendars
+                // Wait, if a new calendar was added globally, it shouldn't necessarily auto-enable for everyone.
+                // Let's just leave their configured visible list alone!
+                // If they want to see a new calendar, they can toggle it on.
+                // So we do nothing here!
             }
             saveFilters()
 
@@ -141,7 +153,7 @@ export function useDashboard() {
         }
     }
 
-    const toggleCalendar = (id) => {
+    const toggleCalendar = async (id) => {
         const profile = activeProfile.value
         const targetId = Number(id)
 
@@ -162,6 +174,15 @@ export function useDashboard() {
 
         filtersByProfile.value[profile] = currentIds
         saveFilters()
+
+        // Sync with backend
+        try {
+            await axios.post(`/api/profiles/${profile}/visible-calendars`, {
+                visible_calendars: currentIds
+            })
+        } catch (e) {
+            console.error('Failed to update visible calendars on backend', e)
+        }
     }
 
     const reorderCalendars = (newOrder) => {

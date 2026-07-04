@@ -183,4 +183,23 @@ class CalendarManagementController extends Controller
             'default_calendar_id' => $profile->default_calendar_id,
         ]);
     }
+
+    public function updateVisibleCalendars(Request $request, $name)
+    {
+        $profile = Profile::where('name', $name)->firstOrFail();
+        
+        $validated = $request->validate([
+            'visible_calendars' => 'required|array',
+            'visible_calendars.*' => 'integer|exists:calendars,id',
+        ]);
+
+        $profile->update([
+            'visible_calendars' => $validated['visible_calendars']
+        ]);
+
+        return response()->json([
+            'message' => 'Visible calendars updated.',
+            'profile' => $profile
+        ]);
+    }
 }

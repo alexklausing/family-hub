@@ -100,9 +100,12 @@ class CalendarController extends Controller
             ];
         });
 
+        $profiles = \App\Models\Profile::all(['id', 'name', 'visible_calendars']);
+
         return response()->json([
             'events' => $formattedEvents,
             'calendars' => $allCalendars,
+            'profiles' => $profiles,
             'default_calendar_id' => $profile->default_calendar_id,
         ]);
     }

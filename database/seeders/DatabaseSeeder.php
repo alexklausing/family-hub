@@ -60,7 +60,43 @@ class DatabaseSeeder extends Seeder
             $this->command->error('Calendar sync failed: '.$e->getMessage());
         }
 
+        $this->command->info('Configuring default calendar visibility for profiles...');
+        $this->seedProfileCalendarVisibility();
+
         $this->command->info('🌱 Database seeding and initial sync complete!');
+    }
+
+    protected function seedProfileCalendarVisibility(): void
+    {
+        $allCalendars = Calendar::all();
+
+        // Define which calendars each profile should see by default
+        // The names here should match the 'name' column of the seeded calendars
+        $visibilityMatrix = [
+            'Family' => ['Scouting', 'Montessori', 'Work', 'A&S Family Calendar'],
+            'Alex' => ['Work', 'A&S Family Calendar'],
+            'Sarah' => ['Montessori', 'A&S Family Calendar'],
+            'Emily' => ['Scouting', 'A&S Family Calendar'],
+            'Henry' => ['A&S Family Calendar'],
+        ];
+
+        foreach (Profile::all() as $profile) {
+            $allowedNames = $visibilityMatrix[$profile->name] ?? [];
+            $visibleIds = [];
+
+            foreach ($allCalendars as $calendar) {
+                if (in_array($calendar->name, $allowedNames)) {
+                    $visibleIds[] = $calendar->id;
+                }
+            }
+
+            // Assign all if matrix mapping isn't found
+            if (empty($allowedNames)) {
+                $visibleIds = $allCalendars->pluck('id')->toArray();
+            }
+
+            $profile->update(['visible_calendars' => $visibleIds]);
+        }
     }
 
     protected function seedFamilyCalendars(Tab $tab): void
