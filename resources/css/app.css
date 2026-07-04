@@ -128,13 +128,15 @@
 
 /* Virtual Keyboard Push-Up */
 html.keyboard-open .dialog-scroll-overlay {
-    padding-bottom: 350px !important;
+    align-items: start !important;
+    padding-top: 2rem !important;
+    padding-bottom: 400px !important;
 }
 
 html.keyboard-open [data-slot="dialog-content"] {
-    transform: translate(-50%, calc(-50% - 175px)) !important;
+    transform: translate(-50%, calc(-50% - 200px)) !important;
 }
 
 html.keyboard-open body {
-    padding-bottom: 350px !important;
+    padding-bottom: 400px !important;
 }

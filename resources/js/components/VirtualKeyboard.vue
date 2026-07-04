@@ -60,13 +60,28 @@ const handleFocus = (e) => {
     }
 }
 
-// Global click outside to close
+// Global click outside to close (or click on input to reopen)
 const handleGlobalClick = (e) => {
-    if (!isVisible.value) return
-    
     // Check if clicked element is an input or the keyboard itself
     const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
     const isKeyboard = e.target.closest('.virtual-keyboard-wrapper')
+    
+    if (isInput) {
+        const type = e.target.type
+        if (['text', 'password', 'email', 'number', 'search', 'tel', 'url', 'textarea'].includes(type) || e.target.tagName === 'TEXTAREA') {
+            currentInput.value = e.target
+            isVisible.value = true
+            document.documentElement.classList.add('keyboard-open')
+            nextTick(() => {
+                if (keyboard.value) {
+                    keyboard.value.setInput(e.target.value)
+                }
+            })
+        }
+        return
+    }
+
+    if (!isVisible.value) return
     
     // Check if clicked inside a Radix UI or shadcn popover/dialog
     // Often when you click a select dropdown, it might blur the input.
