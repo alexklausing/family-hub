@@ -149,6 +149,8 @@ deploy:
 	npm run build
 	@echo "🌱 Running database migrations..."
 	$(SAIL_CMD) artisan migrate --force
+	@echo "🧹 Clearing application cache..."
+	$(SAIL_CMD) artisan cache:clear
 	@echo "🧹 Flushing application caches..."
 	$(SAIL_CMD) artisan optimize:clear
 	@echo "🔗 Linking storage..."
