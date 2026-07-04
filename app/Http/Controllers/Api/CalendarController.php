@@ -57,15 +57,7 @@ class CalendarController extends Controller
 
         Log::info("Profile found: {$profile->name} (ID: {$profile->id})");
 
-        $tab = $profile->tabs()->whereHas('calendars')->first();
-
-        if (! $tab) {
-            Log::info("No tab with calendars found for profile {$profile->name}");
-
-            return response()->json(['events' => [], 'calendars' => []]);
-        }
-
-        Log::info("Tab found: {$tab->name} (ID: {$tab->id})");
+        $allCalendars = Calendar::all();
 
         $start = $request->query('start') ? Carbon::parse($request->query('start')) : now()->subMonth();
         $end = $request->query('end') ? Carbon::parse($request->query('end')) : now()->addMonths(6);
@@ -78,9 +70,9 @@ class CalendarController extends Controller
             return response()->json(['message' => 'Sync should be handled by background workers'], 202);
         }
 
-        // Always return from cache for speed
+        // Always return from cache for speed, fetching for ALL calendars
         $events = CalendarEventCache::with('calendar')
-            ->whereIn('calendar_id', $tab->calendars->pluck('id'))
+            ->whereIn('calendar_id', $allCalendars->pluck('id'))
             ->where(function ($query) use ($start, $end) {
                 if ($start) {
                     $query->where('end', '>=', $start);
@@ -110,7 +102,7 @@ class CalendarController extends Controller
 
         return response()->json([
             'events' => $formattedEvents,
-            'calendars' => $tab->calendars,
+            'calendars' => $allCalendars,
             'default_calendar_id' => $profile->default_calendar_id,
         ]);
     }
