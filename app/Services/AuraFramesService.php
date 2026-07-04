@@ -29,22 +29,25 @@ class AuraFramesService
             return [];
         }
 
-        $token = Cache::remember('aura_auth_token', 86400, function () {
+        $authData = Cache::remember('aura_auth_token', 86400, function () {
             return $this->login();
         });
 
-        if (!$token) {
+        if (!$authData) {
+            dump("Login failed or token not found");
             return [];
         }
 
-        $frames = $this->getFrames($token);
+        $frames = $this->getFrames($authData);
         if (empty($frames)) {
+            dump("No frames found", $frames);
             return [];
         }
 
         // Just fetch assets from the first frame for now
         $frameId = $frames[0]['id'];
-        $assets = $this->getAssets($token, $frameId);
+        $assets = $this->getAssets($authData, $frameId);
+        dump("Found " . count($assets) . " assets");
 
         $photos = [];
         foreach ($assets as $asset) {
@@ -78,19 +81,23 @@ class AuraFramesService
         ]);
 
         if ($response->successful()) {
-            return $response->json('result.current_user.auth_token');
+            return [
+                'token' => $response->json('result.current_user.auth_token'),
+                'user_id' => $response->json('result.current_user.id'),
+            ];
         }
 
         \Log::error('Aura login failed', ['body' => $response->body()]);
         return null;
     }
 
-    protected function getFrames($token)
+    protected function getFrames($authData)
     {
         $response = Http::withHeaders([
             'User-Agent' => self::USER_AGENT,
             'Accept-Language' => 'en-US',
-            'x-token-auth' => $token,
+            'x-token-auth' => $authData['token'],
+            'x-user-id' => $authData['user_id'],
         ])->get(self::API_BASE_URL . '/frames.json');
 
         if ($response->successful()) {
@@ -100,14 +107,15 @@ class AuraFramesService
         return [];
     }
 
-    protected function getAssets($token, $frameId)
+    protected function getAssets($authData, $frameId)
     {
         $response = Http::withHeaders([
             'User-Agent' => self::USER_AGENT,
             'Accept-Language' => 'en-US',
-            'x-token-auth' => $token,
+            'x-token-auth' => $authData['token'],
+            'x-user-id' => $authData['user_id'],
         ])->get(self::API_BASE_URL . "/frames/{$frameId}/assets.json", [
-            'limit' => 100
+            'limit' => 1000
         ]);
 
         if ($response->successful()) {
