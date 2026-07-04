@@ -2,12 +2,12 @@
 
 ## 1. Repo Overview
 
-High-end, touch-optimized family dashboard for Raspberry Pi 5. The primary visual space container is a Dell P2418HT (1080p) touchscreen monitor. 
+High-end, touch-optimized family dashboard for an HP EliteDesk running Ubuntu 26.04 LTS (x86_64). The primary visual space container is a Dell P2418HT (1080p) touchscreen monitor. 
 The system is intended to be mounted horizontally, but all components MUST be built with flexible, responsive layouts (flex/grid wrapping) so that it COULD be mounted vertically without breaking the UI.
 
 - **Backend:** Laravel 11 / SQLite
 - **Frontend:** Vue 3 / Tailwind v4 / shadcn-vue
-- **Stack Sync:** Laravel Sail (ARM64)
+- **Stack Sync:** Laravel Sail (x86_64)
 
 ## 2. Knowledge Architecture
 

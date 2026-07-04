@@ -119,11 +119,6 @@
 }
 
 @layer base {
-    @media (pointer: coarse) and (hover: none) {
-        * {
-            cursor: none !important;
-        }
-    }
     body {
         @apply bg-background text-foreground;
         font-family: var(--font-sans);

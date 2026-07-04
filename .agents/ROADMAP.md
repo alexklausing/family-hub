@@ -3,7 +3,7 @@
 ## Current Status: Phase 1 (Foundation) Complete ✅
 
 - [x] Laravel 11 / Vue 3 / Vite Setup
-- [x] Docker Sail (ARM64) Configuration
+- [x] Docker Sail (x86_64) Configuration
 - [x] shadcn-vue & Tailwind v4 Integration
 - [x] Testing & Quality Suite (Pest, Vitest, Fallow, PHPStan)
 - [x] Agent Infrastructure (.agents/ & GEMINI.md)
@@ -31,10 +31,10 @@
 - [ ] **Kitchen Mode:** Large-format view with touch-to-complete interactions.
 - [ ] **Meal Plan Calendar:** Integrated recipe links within the calendar grid.
 
-## Phase 5: Raspberry Pi Deployment 🥧
+## Phase 5: Ubuntu Server Deployment 🖥️
 
-- [ ] **ARM64 Image Optimization:** Final Docker tuning for Pi 5 performance.
-- [ ] **Kiosk Mode Script:** Auto-launching Chromium in full-screen touch mode on boot.
+- [ ] **x86_64 Image Optimization:** Final Docker tuning for HP EliteDesk performance.
+- [ ] **Kiosk Mode Script:** Auto-launching Chromium in full-screen touch mode on boot on Ubuntu.
 - [ ] **Offline Resilience:** Local SQLite caching strategy for all cloud data.
 
 ## Future Ideas 🚀

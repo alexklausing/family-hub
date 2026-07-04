@@ -4,13 +4,13 @@ _Generated for session restart / context continuity._
 
 ## Project Overview
 
-A high-end, touch-optimized family dashboard designed for a Raspberry Pi 5 and a 24" ViewSonic monitor. The system aggregates multiple calendar sources, weather, tasks, and recipes into a unified "Netflix-style" profile interface.
+A high-end, touch-optimized family dashboard designed for an HP EliteDesk (Ubuntu 26.04 LTS x86_64) and a Dell P2418HT (1080p) touchscreen monitor. The system aggregates multiple calendar sources, weather, tasks, and recipes into a unified "Netflix-style" profile interface.
 
 **Tech Stack:**
 
 - **Backend:** Laravel 11, SQLite
 - **Frontend:** Vue 3 (Composition API), Vite, Tailwind CSS v4, shadcn-vue, FullCalendar v6
-- **Infra:** Laravel Sail (Docker ARM64)
+- **Infra:** Laravel Sail (Docker x86_64)
 - **Quality:** Pest, Vitest, PHPStan, Pint, Prettier, Fallow (Codebase Health)
 
 ---
@@ -19,7 +19,7 @@ A high-end, touch-optimized family dashboard designed for a Raspberry Pi 5 and a
 
 ### Phase 1: Environment & Foundation ✅
 
-- Initialized Laravel 11 and Docker Sail optimized for ARM64.
+- Initialized Laravel 11 and Docker Sail optimized for x86_64.
 - Setup Vue 3, Vite, and Tailwind v4.
 - Integrated `shadcn-vue` and generated core components locally.
 - Established strict AI Agent guidelines (`GEMINI.md`, `AGENTS.md`, and `.agents/` directory).
