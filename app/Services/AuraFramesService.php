@@ -34,20 +34,21 @@ class AuraFramesService
         });
 
         if (!$authData) {
-            dump("Login failed or token not found");
+            \Log::error("Aura login failed or token not found");
             return [];
         }
 
         $frames = $this->getFrames($authData);
         if (empty($frames)) {
-            dump("No frames found", $frames);
+            \Log::warning("Aura no frames found", ['frames' => $frames]);
             return [];
         }
 
         // Just fetch assets from the first frame for now
         $frameId = $frames[0]['id'];
+        \Log::info("Fetching assets for frame", ['frame_id' => $frameId]);
         $assets = $this->getAssets($authData, $frameId);
-        dump("Found " . count($assets) . " assets");
+        \Log::info("Found Aura assets", ['count' => count($assets)]);
 
         $photos = [];
         foreach ($assets as $asset) {
@@ -104,6 +105,7 @@ class AuraFramesService
             return $response->json('frames') ?? [];
         }
 
+        \Log::error('Aura getFrames failed', ['status' => $response->status(), 'body' => $response->body()]);
         return [];
     }
 
@@ -122,6 +124,7 @@ class AuraFramesService
             return $response->json('assets') ?? [];
         }
 
+        \Log::error('Aura getAssets failed', ['status' => $response->status(), 'body' => $response->body()]);
         return [];
     }
 }
