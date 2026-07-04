@@ -186,7 +186,7 @@ const handleSyncRequest = (option) => {
     >
         <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-6">
             <!-- Header Island Component -->
-            <DashboardHeader :active-tab="activeTab" @open-settings="isSettingsDialogOpen = true" />
+            <DashboardHeader :active-tab="activeTab" :local-timezone="localTimezone" @open-settings="isSettingsDialogOpen = true" />
 
             <!-- Global Weather Alerts Banner -->
             <div v-if="isBannerVisible" class="shrink-0 -mt-2">

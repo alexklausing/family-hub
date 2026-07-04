@@ -24,6 +24,10 @@ const props = defineProps({
         type: String,
         default: 'family',
     },
+    localTimezone: {
+        type: String,
+        default: 'America/New_York',
+    },
 })
 
 const emit = defineEmits(['open-settings'])
@@ -56,10 +60,12 @@ const currentDate = ref('')
 const updateDateTime = () => {
     const now = new Date()
     currentTime.value = now.toLocaleTimeString([], {
+        timeZone: props.localTimezone,
         hour: '2-digit',
         minute: '2-digit',
     })
     currentDate.value = now.toLocaleDateString([], {
+        timeZone: props.localTimezone,
         weekday: 'short',
         month: 'short',
         day: 'numeric',
