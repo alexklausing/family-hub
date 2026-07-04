@@ -125,15 +125,15 @@ class CalendarController extends Controller
             return response()->json(['error' => 'This calendar provider does not support creating events via this application.'], 400);
         }
 
-        $success = $this->calendarManager->createEvent($calendar, $validated);
+        try {
+            $this->calendarManager->createEvent($calendar, $validated);
 
-        if ($success) {
             // Trigger a sync so the event shows up quickly
             $this->calendarManager->syncCalendar($calendar);
 
             return response()->json(['message' => 'Event created successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to create event: ' . $e->getMessage()], 500);
         }
-
-        return response()->json(['error' => 'Failed to create event on the remote calendar.'], 500);
     }
 }

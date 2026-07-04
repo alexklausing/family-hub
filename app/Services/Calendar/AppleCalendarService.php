@@ -236,7 +236,11 @@ class AppleCalendarService
         }
     }
 
-    public function createEvent(string $email, string $password, string $calendarPath, array $eventDetails): bool
+    /**
+     * Create an event on the remote calendar provider.
+     * Throws an exception on failure.
+     */
+    public function createEvent(string $email, string $password, string $calendarPath, array $eventDetails): void
     {
         $this->initClient($email, $password);
 
@@ -293,10 +297,12 @@ class AppleCalendarService
             $vcal .= "DTSTAMP:{$now}\r\n";
             $vcal .= "{$dtStart}\r\n";
             $vcal .= "{$dtEnd}\r\n";
-            $vcal .= "SUMMARY:{$title}\r\n";
+
+            $escapedTitle = str_replace(['\\', ',', ';', "\r\n", "\n", "\r"], ['\\\\', '\\,', '\\;', '\\n', '\\n', '\\n'], $title);
+            $vcal .= "SUMMARY:{$escapedTitle}\r\n";
+
             if (! empty($description)) {
-                // Escape newlines for VCALENDAR
-                $escapedDesc = str_replace(["\r\n", "\n", "\r"], '\\n', $description);
+                $escapedDesc = str_replace(['\\', ',', ';', "\r\n", "\n", "\r"], ['\\\\', '\\,', '\\;', '\\n', '\\n', '\\n'], $description);
                 $vcal .= "DESCRIPTION:{$escapedDesc}\r\n";
             }
             $vcal .= "END:VEVENT\r\n";
@@ -312,16 +318,15 @@ class AppleCalendarService
             $response = $this->client->send($request);
 
             if ($response->getStatus() >= 200 && $response->getStatus() < 300) {
-                return true;
+                return;
             }
 
-            \Log::error('iCloud Create Event failed: '.$response->getStatus().' - '.$response->getBodyAsString());
-
-            return false;
+            $errorMsg = 'iCloud Create Event failed: '.$response->getStatus().' - '.$response->getBodyAsString();
+            \Log::error($errorMsg);
+            throw new \Exception($errorMsg);
         } catch (\Exception $e) {
             \Log::error('iCloud Sync Error ('.get_class($e).'): '.$e->getMessage());
-
-            return false;
+            throw $e;
         }
     }
 

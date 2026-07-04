@@ -87,9 +87,9 @@ class CalendarManager
     /**
      * Create an event on the remote calendar provider.
      */
-    public function createEvent(Calendar $calendar, array $eventDetails): bool
+    public function createEvent(Calendar $calendar, array $eventDetails): void
     {
-        return match ($calendar->provider) {
+        match ($calendar->provider) {
             'apple' => $this->apple->createEvent(
                 $calendar->credentials['email'] ?? '',
                 $calendar->credentials['password'] ?? '',
@@ -98,7 +98,7 @@ class CalendarManager
             ),
             // 'google' => $this->google->createEvent($calendar, $eventDetails),
             // 'office365' => $this->office->createEvent($calendar, $eventDetails),
-            default => false,
+            default => throw new \Exception('Provider not supported'),
         };
     }
 }
