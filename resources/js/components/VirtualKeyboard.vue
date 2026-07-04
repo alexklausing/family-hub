@@ -114,15 +114,15 @@ onMounted(() => {
         theme: "hg-theme-default hg-layout-default my-theme"
     })
     
-    document.addEventListener('focusin', handleFocus)
-    document.addEventListener('input', handleGlobalInput)
-    document.addEventListener('click', handleGlobalClick)
+    document.addEventListener('focusin', handleFocus, true)
+    document.addEventListener('input', handleGlobalInput, true)
+    document.addEventListener('click', handleGlobalClick, true)
 })
 
 onUnmounted(() => {
-    document.removeEventListener('focusin', handleFocus)
-    document.removeEventListener('input', handleGlobalInput)
-    document.removeEventListener('click', handleGlobalClick)
+    document.removeEventListener('focusin', handleFocus, true)
+    document.removeEventListener('input', handleGlobalInput, true)
+    document.removeEventListener('click', handleGlobalClick, true)
     if (keyboard.value) keyboard.value.destroy()
 })
 </script>
