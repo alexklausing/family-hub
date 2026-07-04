@@ -73,13 +73,36 @@ watch(defaultRadarLayers, (newVal) => {
 const developerSettings = ref(JSON.parse(localStorage.getItem('developerSettings') || 'null') || {
     masterToggle: false,
     testWeatherAlerts: false,
+    hideCursor: false,
 })
 provide('developerSettings', developerSettings)
+
+const applyCursorSetting = () => {
+    if (developerSettings.value.hideCursor) {
+        document.body.classList.add('cursor-none')
+        // Hide cursor on all child elements too
+        const style = document.createElement('style')
+        style.id = 'hide-cursor-style'
+        style.innerHTML = '* { cursor: none !important; }'
+        if (!document.getElementById('hide-cursor-style')) {
+            document.head.appendChild(style)
+        }
+    } else {
+        document.body.classList.remove('cursor-none')
+        const style = document.getElementById('hide-cursor-style')
+        if (style) style.remove()
+    }
+}
 
 watch(developerSettings, (newVal) => {
     localStorage.setItem('developerSettings', JSON.stringify(newVal))
     fetchWeather(true) // Refresh weather when developer settings change
+    applyCursorSetting()
 }, { deep: true })
+
+onMounted(() => {
+    applyCursorSetting()
+})
 
 watch(weatherData, updateTheme, { deep: true })
 let themeInterval = null

@@ -317,6 +317,13 @@ const refreshKiosk = async () => {
                                     <span class="font-bold text-lg">Test Weather Alerts</span>
                                     <Switch :checked="devSettings.testWeatherAlerts" @update:checked="val => devSettings = { ...devSettings, testWeatherAlerts: val }" />
                                 </div>
+                                <div class="flex items-center justify-between" :class="!devSettings.masterToggle ? 'opacity-50' : ''">
+                                    <div class="space-y-0.5">
+                                        <span class="font-bold text-lg">Hide Mouse Cursor</span>
+                                        <p class="text-xs opacity-60">Hide cursor entirely on this specific device (for kiosks)</p>
+                                    </div>
+                                    <Switch :checked="devSettings.hideCursor" @update:checked="val => devSettings = { ...devSettings, hideCursor: val }" />
+                                </div>
                             </div>
                         </div>
                     </div>

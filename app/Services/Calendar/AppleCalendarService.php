@@ -132,12 +132,60 @@ class AppleCalendarService
                 '{urn:ietf:params:xml:ns:caldav}calendar-description',
             ], 1);
             
+            // Attempt to fetch delegated/family calendars via proxy
+            try {
+                $proxyProps = $this->client->propFind($principalUrl, [
+                    '{http://calendarserver.org/ns/}calendar-proxy-read-for',
+                    '{http://calendarserver.org/ns/}calendar-proxy-write-for'
+                ], 0);
+
+                $delegates = [];
+                if (isset($proxyProps['{http://calendarserver.org/ns/}calendar-proxy-read-for'])) {
+                    $val = $proxyProps['{http://calendarserver.org/ns/}calendar-proxy-read-for'];
+                    if (is_array($val)) {
+                        foreach ($val as $v) {
+                            if (isset($v['value'])) $delegates[] = $v['value'];
+                        }
+                    } else if (is_string($val)) {
+                        $delegates[] = $val;
+                    }
+                }
+                if (isset($proxyProps['{http://calendarserver.org/ns/}calendar-proxy-write-for'])) {
+                    $val = $proxyProps['{http://calendarserver.org/ns/}calendar-proxy-write-for'];
+                    if (is_array($val)) {
+                        foreach ($val as $v) {
+                            if (isset($v['value'])) $delegates[] = $v['value'];
+                        }
+                    } else if (is_string($val)) {
+                        $delegates[] = $val;
+                    }
+                }
+
+                $delegates = array_unique($delegates);
+
+                foreach ($delegates as $delegatePrincipal) {
+                    try {
+                        $delegateHomeSet = $this->getCalendarHomeSet($delegatePrincipal);
+                        $delegateCalendars = $this->client->propFind($delegateHomeSet, [
+                            '{DAV:}displayname',
+                            '{urn:ietf:params:xml:ns:caldav}calendar-description',
+                        ], 1);
+                        // Merge delegate calendars
+                        $calendars = array_merge($calendars, $delegateCalendars);
+                    } catch (\Exception $e) {
+                        \Log::warning("Failed to fetch delegate home set for $delegatePrincipal: " . $e->getMessage());
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('iCloud proxy fetch failed: ' . $e->getMessage());
+            }
+
             \Log::info('iCloud getCalendars propFind response: ', $calendars);
 
             $result = [];
             foreach ($calendars as $path => $props) {
-                // Skip the parent calendar-home-set container itself
-                if (rtrim($path, '/') === rtrim($calendarHomeSet, '/')) {
+                // Skip the parent calendar-home-set containers
+                if (rtrim($path, '/') === rtrim($calendarHomeSet, '/') || str_ends_with(rtrim($path, '/'), 'calendars')) {
                     continue;
                 }
 
