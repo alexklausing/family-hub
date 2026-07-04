@@ -36,8 +36,9 @@ class CalendarController extends Controller
         $totalProfiles = Profile::count();
         Log::info("Fetching events for profile: {$profileName}. Total profiles in DB: {$totalProfiles}");
 
-        // Use case-insensitive search for PostgreSQL compatibility
-        $profile = Profile::where('name', 'ILIKE', trim($profileName))->first();
+        // Use cross-database compatible case-insensitive search
+        $operator = config('database.default') === 'pgsql' ? 'ILIKE' : 'LIKE';
+        $profile = Profile::where('name', $operator, trim($profileName))->first();
 
         // Fallback to default profile if requested one not found
         if (! $profile) {

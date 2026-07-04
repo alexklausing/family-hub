@@ -167,7 +167,8 @@ class CalendarManagementController extends Controller
             'calendar_id' => 'required|exists:calendars,id',
         ]);
 
-        $profile = Profile::where('name', 'ILIKE', trim($profileName))->first();
+        $operator = config('database.default') === 'pgsql' ? 'ILIKE' : 'LIKE';
+        $profile = Profile::where('name', $operator, trim($profileName))->first();
 
         if (! $profile) {
             return response()->json(['error' => 'Profile not found'], 404);
