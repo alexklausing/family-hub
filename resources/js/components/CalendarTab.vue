@@ -124,22 +124,7 @@ const isFetchingAppleCalendars = ref(false)
 const availableAppleCalendars = ref([])
 const importError = ref('')
 
-// Long Press Logic
-let longPressTimer = null
-const handleTouchStart = () => {
-    longPressTimer = setTimeout(() => {
-        isFilterDialogOpen.value = true
-        longPressTimer = null
-    }, 600)
-}
-
-const handleTouchEnd = () => {
-    if (longPressTimer) {
-        clearTimeout(longPressTimer)
-        longPressTimer = null
-        isUserDrawerOpen.value = true
-    }
-}
+// Long Press logic has been replaced with native @contextmenu.prevent for better touchscreen support
 
 // Schedule Events Logic
 const getEventDate = (event, isEnd = false) => {
@@ -770,18 +755,14 @@ onUnmounted(() => {
             ></div>
         </Transition>
 
-        <!-- Slim Toolbar -->
         <div class="flex shrink-0 items-center justify-between px-2">
             <div class="flex items-center gap-4">
                 <!-- User Button replaces static Title -->
                 <Button
                     variant="ghost"
                     class="flex h-14 items-center gap-4 rounded-2xl border border-white/10 bg-white/40 px-6 shadow-none backdrop-blur-2xl transition-all select-none hover:bg-white/60 active:scale-95 dark:bg-white/5"
-                    @mousedown="handleTouchStart"
-                    @mouseup="handleTouchEnd"
-                    @mouseleave="handleTouchEnd"
-                    @touchstart.passive="handleTouchStart"
-                    @touchend.passive="handleTouchEnd"
+                    @click="isUserDrawerOpen = true"
+                    @contextmenu.prevent="isFilterDialogOpen = true"
                 >
                     <div
                         class="bg-primary/10 pointer-events-none flex h-8 w-8 items-center justify-center rounded-lg"
