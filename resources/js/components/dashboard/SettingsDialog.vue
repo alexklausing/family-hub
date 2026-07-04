@@ -322,7 +322,7 @@ const refreshKiosk = async () => {
                                         <span class="font-bold text-lg">Hide Mouse Cursor</span>
                                         <p class="text-xs opacity-60">Hide cursor entirely on this specific device (for kiosks)</p>
                                     </div>
-                                    <Switch :checked="devSettings.hideCursor" @update:checked="val => devSettings = { ...devSettings, hideCursor: val }" />
+                                    <Switch :disabled="!devSettings.masterToggle" :checked="devSettings.hideCursor" @update:checked="val => devSettings = { ...devSettings, hideCursor: val }" />
                                 </div>
                             </div>
                         </div>
