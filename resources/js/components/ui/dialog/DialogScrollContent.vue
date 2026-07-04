@@ -65,6 +65,11 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
                         }
                     }
                 "
+                @interact-outside="(e) => {
+                    if (e.target.closest('.virtual-keyboard-wrapper')) {
+                        e.preventDefault()
+                    }
+                }"
             >
                 <slot />
 

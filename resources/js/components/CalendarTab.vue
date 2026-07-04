@@ -261,6 +261,7 @@ const calendarOptions = ref({
     },
 
     select: handleDateSelect,
+    dateClick: handleDateClick,
     eventClick: handleEventClick,
     datesSet: handleDatesSet,
 })
@@ -411,6 +412,14 @@ function handleDateSelect(selectInfo) {
     }
     eventError.value = ''
     isModalOpen.value = true
+}
+
+function handleDateClick(info) {
+    handleDateSelect({
+        startStr: info.dateStr,
+        endStr: info.dateStr,
+        allDay: info.allDay
+    })
 }
 
 function handleEventClick(clickInfo) {

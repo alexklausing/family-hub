@@ -136,7 +136,7 @@ onUnmounted(() => {
         leave-from-class="translate-y-0"
         leave-to-class="translate-y-full"
     >
-        <div v-show="isVisible" class="virtual-keyboard-wrapper fixed bottom-0 left-0 right-0 z-[9999] bg-[#e2e2e4] dark:bg-[#1c1c1e] p-4 pt-5 shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-white/20 backdrop-blur-3xl">
+        <div v-show="isVisible" class="virtual-keyboard-wrapper pointer-events-auto fixed bottom-0 left-0 right-0 z-[9999] bg-[#e2e2e4] dark:bg-[#1c1c1e] p-4 pt-5 shadow-[0_-20px_60px_rgba(0,0,0,0.5)] border-t border-white/20 backdrop-blur-3xl">
             <div ref="keyboardRef" class="max-w-[1400px] mx-auto"></div>
         </div>
     </Transition>
