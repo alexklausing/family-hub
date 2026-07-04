@@ -124,3 +124,17 @@
         font-family: var(--font-sans);
     }
 }
+
+
+/* Virtual Keyboard Push-Up */
+html.keyboard-open .dialog-scroll-overlay {
+    padding-bottom: 350px !important;
+}
+
+html.keyboard-open [data-slot="dialog-content"] {
+    transform: translate(-50%, calc(-50% - 175px)) !important;
+}
+
+html.keyboard-open body {
+    padding-bottom: 350px !important;
+}

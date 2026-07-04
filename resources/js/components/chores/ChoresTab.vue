@@ -14,6 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogScrollContent,
 } from '@/components/ui/dialog'
 import {
     Plus,
@@ -1679,7 +1680,7 @@ watch(
 
         <!-- ── Add/Edit Chore Modal ── -->
         <Dialog v-model:open="isManageModalOpen">
-            <DialogContent class="sm:max-w-[540px]">
+            <DialogScrollContent class="sm:max-w-[540px]">
                 <DialogHeader>
                     <DialogTitle>{{
                         editingChore ? 'Edit Chore' : 'Add New Chore'
@@ -2282,7 +2283,7 @@ watch(
                         >Save Chore</Button
                     >
                 </DialogFooter>
-            </DialogContent>
+            </DialogScrollContent>
         </Dialog>
 
         <!-- ── Labels Library Modal ── -->

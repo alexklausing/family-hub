@@ -28,6 +28,7 @@ const onKeyPress = (button) => {
     }
     if (button === '{close}') {
         isVisible.value = false
+        document.documentElement.classList.remove('keyboard-open')
         if (currentInput.value) {
             currentInput.value.blur()
             currentInput.value = null
@@ -49,6 +50,7 @@ const handleFocus = (e) => {
         if (['text', 'password', 'email', 'number', 'search', 'tel', 'url', 'textarea'].includes(type) || target.tagName === 'TEXTAREA') {
             currentInput.value = target
             isVisible.value = true
+            document.documentElement.classList.add('keyboard-open')
             nextTick(() => {
                 if (keyboard.value) {
                     keyboard.value.setInput(target.value)
@@ -73,6 +75,7 @@ const handleGlobalClick = (e) => {
     if (!isInput && !isKeyboard) {
         // Only hide if we actually click a button or empty space
         isVisible.value = false
+        document.documentElement.classList.remove('keyboard-open')
         currentInput.value = null
     }
 }
