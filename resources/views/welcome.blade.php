@@ -5,6 +5,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Family Hub</title>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @production
+        <style>
+            * {
+                cursor: none !important;
+            }
+        </style>
+        @endproduction
     </head>
     <body class="antialiased font-sans">
         <div id="app"></div>

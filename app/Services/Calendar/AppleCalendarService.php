@@ -5,7 +5,7 @@ namespace App\Services\Calendar;
 use App\Models\Calendar;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use Sabre\Dav\Client;
+use Sabre\DAV\Client;
 use Sabre\HTTP\Request;
 use Sabre\VObject;
 use Sabre\Xml\Service;

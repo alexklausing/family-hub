@@ -145,6 +145,8 @@ deploy:
 	$(SAIL_CMD) composer install --no-interaction --prefer-dist --optimize-autoloader
 	@echo "📦 Syncing Node dependencies..."
 	npm install
+	@echo "🏗️ Building frontend assets..."
+	npm run build
 	@echo "🌱 Running database migrations..."
 	$(SAIL_CMD) artisan migrate --force
 	@echo "🧹 Flushing application caches..."
