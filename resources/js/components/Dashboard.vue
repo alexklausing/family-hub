@@ -9,6 +9,7 @@ import RecipeBrowser from './recipes/RecipeBrowser.vue'
 import ShoppingList from './shopping/ShoppingList.vue'
 import WeatherTab from './WeatherTab.vue'
 import ChoresTab from './chores/ChoresTab.vue'
+import OtherTab from './OtherTab.vue'
 
 // Extracted Subcomponents & Composable
 import { useDashboard } from './dashboard/useDashboard'
@@ -302,6 +303,13 @@ const handleSyncRequest = (option) => {
                         :activeProfile="activeProfile"
                         @update:activeProfile="activeProfile = $event"
                     />
+                </TabsContent>
+
+                <TabsContent
+                    value="other"
+                    class="m-0 h-full p-0 focus-visible:ring-0"
+                >
+                    <OtherTab />
                 </TabsContent>
             </div>
         </Tabs>

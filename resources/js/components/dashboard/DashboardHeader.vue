@@ -16,6 +16,7 @@ import {
     Settings,
     Telescope,
     Radar,
+    LayoutGrid,
 } from 'lucide-vue-next'
 import { useWeather } from '@/composables/useWeather'
 
@@ -149,6 +150,13 @@ onUnmounted(() => {
             >
                 <CheckSquare class="h-5 w-5" />
                 <span class="hidden lg:inline">Chores</span>
+            </TabsTrigger>
+            <TabsTrigger
+                value="other"
+                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
+            >
+                <LayoutGrid class="h-5 w-5" />
+                <span class="hidden lg:inline">Other</span>
             </TabsTrigger>
         </TabsList>
 

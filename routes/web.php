@@ -30,6 +30,8 @@ Route::get('/api/fun-facts', [FunFactsController::class, 'index']);
 
 Route::get('/api/weather', [WeatherController::class, 'index']);
 
+Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 'index']);
+
 Route::get('/api/recipes', [RecipeController::class, 'index']);
 Route::get('/api/recipes/categories', [RecipeController::class, 'categories']);
 Route::get('/api/recipes/{recipe}', [RecipeController::class, 'show']);

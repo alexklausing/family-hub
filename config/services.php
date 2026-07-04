@@ -40,6 +40,11 @@ return [
         'password' => env('ICLOUD_PASSWORD'),
     ],
 
+    'aura' => [
+        'email' => env('AURA_EMAIL'),
+        'password' => env('AURA_PASSWORD'),
+    ],
+
     'google' => [
         'calendar_id' => env('GOOGLE_CALENDAR_ID'),
         'service_account' => env('GOOGLE_SERVICE_ACCOUNT_JSON_PATH'),
