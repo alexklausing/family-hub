@@ -215,14 +215,20 @@ class AppleCalendarService
                     $name = ucfirst($basename); // Fallback to folder name
                 }
 
-                if (is_string($name) && ! empty($name)) {
+                $decodedName = html_entity_decode($name);
+
+                if (is_string($decodedName) && ! empty($decodedName)) {
+                    \Log::info("Found Calendar: path={$path}, name={$name}, decoded={$decodedName}");
                     $result[] = [
-                        'name' => $name,
+                        'name' => $decodedName,
                         'path' => $path,
                     ];
+                } else {
+                    \Log::warning("Skipping Calendar (empty name): path={$path}");
                 }
             }
 
+            \Log::info("iCloud getCalendars Final Result: ", $result);
             return $result;
         } catch (\Exception $e) {
             \Log::error('iCloud getCalendars Error ('.get_class($e).'): '.$e->getMessage());
