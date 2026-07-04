@@ -131,6 +131,8 @@ class AppleCalendarService
                 '{DAV:}displayname',
                 '{urn:ietf:params:xml:ns:caldav}calendar-description',
             ], 1);
+            
+            \Log::info('iCloud getCalendars propFind response: ', $calendars);
 
             $result = [];
             foreach ($calendars as $path => $props) {
@@ -175,6 +177,7 @@ class AppleCalendarService
 
             return $result;
         } catch (\Exception $e) {
+            \Log::error('iCloud getCalendars Error ('.get_class($e).'): '.$e->getMessage());
             return [];
         }
     }

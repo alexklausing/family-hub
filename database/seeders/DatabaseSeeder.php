@@ -95,15 +95,7 @@ class DatabaseSeeder extends Seeder
                 $appleCalendars = $appleService->getCalendars(config('services.apple.email'), config('services.apple.password'));
 
                 foreach ($appleCalendars as $appleCalendar) {
-                    if (str_contains($appleCalendar['name'], 'Personal')) {
-                        $calendars[] = [
-                            'provider' => 'apple',
-                            'external_id' => 'apple_personal',
-                            'name' => 'Personal',
-                            'color' => '#3b82f6', // Blue for Personal
-                            'credentials' => ['path' => $appleCalendar['path']],
-                        ];
-                    } elseif (str_contains($appleCalendar['name'], 'A&S Family Calendar')) {
+                    if (str_contains($appleCalendar['name'], 'A&S Family Calendar')) {
                         $calendars[] = [
                             'provider' => 'apple',
                             'external_id' => 'apple_family',
