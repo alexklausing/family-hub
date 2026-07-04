@@ -75,9 +75,9 @@ class DatabaseSeeder extends Seeder
         $visibilityMatrix = [
             'Family' => ['Scouting', 'Montessori', 'Work', 'A&S Family Calendar'],
             'Alex' => ['Work', 'A&S Family Calendar'],
-            'Sarah' => ['Montessori', 'A&S Family Calendar'],
-            'Emily' => ['Scouting', 'A&S Family Calendar'],
-            'Henry' => ['A&S Family Calendar'],
+            'Sarah' => ['A&S Family Calendar'],
+            'Emily' => ['Montessori'],
+            'Henry' => ['Montessori', 'Scouting'],
         ];
 
         foreach (Profile::all() as $profile) {
