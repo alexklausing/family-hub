@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\CalendarManagementController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
-use App\Http\Controllers\Api\FunFactsController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\RewardLedgerController;
@@ -26,7 +25,6 @@ Route::delete('/api/calendars/{calendar}', [CalendarManagementController::class,
 Route::post('/api/profiles/{name}/default-calendar', [CalendarManagementController::class, 'setDefaultCalendar']);
 Route::post('/api/profiles/{name}/visible-calendars', [CalendarManagementController::class, 'updateVisibleCalendars']);
 
-Route::get('/api/fun-facts', [FunFactsController::class, 'index']);
 
 Route::get('/api/weather', [WeatherController::class, 'index']);
 
