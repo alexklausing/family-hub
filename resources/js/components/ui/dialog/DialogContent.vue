@@ -69,10 +69,10 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             >
                 <Button
                     variant="ghost"
-                    class="absolute top-2 right-2"
-                    size="icon-sm"
+                    class="absolute top-6 right-6 h-14 w-14 rounded-full bg-slate-100/50 hover:bg-slate-200/80 dark:bg-slate-800/50 dark:hover:bg-slate-700/80 backdrop-blur-sm transition-all"
+                    size="icon"
                 >
-                    <XIcon />
+                    <XIcon class="h-6 w-6 opacity-70" />
                     <span class="sr-only">Close</span>
                 </Button>
             </DialogClose>
