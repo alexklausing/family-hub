@@ -20,7 +20,7 @@ buildFresh: down
 	@echo "🌱 Migrating..."
 	$(SAIL_CMD) artisan migrate
 	@echo "🔗 Linking storage..."
-	-$(SAIL_CMD) artisan storage:link
+	$(SAIL_CMD) artisan storage:link --force
 	@echo "✅ Setup Complete! Run 'make vite' to start the frontend."
 
 # Start containers
@@ -154,7 +154,7 @@ deploy:
 	@echo "🧹 Flushing application caches..."
 	$(SAIL_CMD) artisan optimize:clear
 	@echo "🔗 Linking storage..."
-	-$(SAIL_CMD) artisan storage:link
+	$(SAIL_CMD) artisan storage:link --force
 	@echo "🔄 Sending reload signal to kiosks..."
 	$(SAIL_CMD) artisan kiosk:refresh
 	@echo "✅ Deployment complete! Kiosks will refresh automatically within 15 seconds."
