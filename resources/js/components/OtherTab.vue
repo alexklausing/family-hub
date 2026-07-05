@@ -1,12 +1,15 @@
 <script setup>
 import { ref } from 'vue'
 import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, BadgeCheck, CheckCircle2 } from 'lucide-vue-next'
-import { useLongPress } from '../composables/useLongPress'
 
 const props = defineProps({
     workspaces: {
         type: Array,
         default: () => []
+    },
+    isEditing: {
+        type: Boolean,
+        default: false
     }
 })
 
@@ -60,25 +63,18 @@ const isAppPinned = (appId) => {
     return !!getDedicatedWorkspace(appId)
 }
 
-// To handle long press without executing click, useLongPress abstracts it
-// We will bind it to each button
-const buttonEvents = (appId) => {
-    return useLongPress(
-        // onLongPress
-        (e) => {
-            if ('vibrate' in navigator) navigator.vibrate(50) // Haptic feedback if available
-            const ws = getDedicatedWorkspace(appId)
-            if (ws) {
-                emit('remove-workspace', ws.id)
-            } else {
-                emit('create-workspace', appId)
-            }
-        },
-        // onClick
-        (e) => {
-            emit('launch', appId)
+const handleAppClick = (appId) => {
+    if (props.isEditing) {
+        if ('vibrate' in navigator) navigator.vibrate(50) // Haptic feedback if available
+        const ws = getDedicatedWorkspace(appId)
+        if (ws) {
+            emit('remove-workspace', ws.id)
+        } else {
+            emit('create-workspace', appId)
         }
-    )
+    } else {
+        emit('launch', appId)
+    }
 }
 </script>
 
@@ -86,7 +82,8 @@ const buttonEvents = (appId) => {
     <div class="h-full flex flex-col p-6">
         <div class="mb-10 text-center">
             <h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">App Library</h1>
-            <p class="text-lg font-medium text-slate-500 mt-2">Press and hold an app to pin or unpin it from the main dashboard tabs.</p>
+            <p class="text-lg font-medium text-slate-500 mt-2" v-if="props.isEditing">Tap an app to pin or unpin it from the main dashboard tabs.</p>
+            <p class="text-lg font-medium text-slate-500 mt-2" v-else>Tap an app to launch it in a temporary view.</p>
         </div>
 
         <!-- Grid of Apps (iPhone style) -->
@@ -94,18 +91,19 @@ const buttonEvents = (appId) => {
             <button
                 v-for="app in apps"
                 :key="app.id"
-                v-on="buttonEvents(app.id)"
+                @click="handleAppClick(app.id)"
                 class="relative flex flex-col items-center justify-center gap-3 outline-none select-none touch-none"
             >
                 <div 
                     class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] flex items-center justify-center shadow-xl transition-all duration-300 text-white scale-100"
-                    :class="app.color"
+                    :class="[app.color, props.isEditing ? 'animate-jiggle origin-center' : '']"
+                    :style="{ animationDelay: props.isEditing ? `${Math.random() * 0.2}s` : '0s' }"
                 >
                     <component :is="app.icon" class="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-md" />
                     
                     <!-- Pinned Badge -->
                     <div 
-                        v-if="isAppPinned(app.id)"
+                        v-if="props.isEditing && isAppPinned(app.id)"
                         class="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full border-4 border-[#f2f2f7] dark:border-black flex items-center justify-center text-white shadow-lg animate-in zoom-in duration-300"
                     >
                         <Pin class="w-3.5 h-3.5" stroke-width="3" />

@@ -201,17 +201,13 @@ onUnmounted(() => {
             </div>
 
             <Button
-                v-if="props.activeTab !== 'other'"
+                v-if="props.isEditing && props.activeTab !== 'other'"
                 variant="ghost"
                 size="icon"
                 @click.stop="emit('toggle-edit')"
-                :class="[
-                    'h-16 w-16 rounded-3xl shadow-none backdrop-blur-2xl transition-all',
-                    props.isEditing ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/40 hover:bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white'
-                ]"
+                class="h-16 w-16 rounded-3xl shadow-none backdrop-blur-2xl transition-all bg-indigo-500 text-white hover:bg-indigo-600"
             >
-                <Check v-if="props.isEditing" class="h-7 w-7" />
-                <Pencil v-else class="h-6 w-6" />
+                <Check class="h-7 w-7" />
             </Button>
 
             <Button

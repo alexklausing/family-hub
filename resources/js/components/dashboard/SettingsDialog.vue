@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
-import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code } from 'lucide-vue-next'
+import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid } from 'lucide-vue-next'
 
 const props = defineProps({
     open: {
@@ -37,6 +37,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    isEditingLayouts: {
+        type: Boolean,
+        required: true,
+    },
 })
 
 const emit = defineEmits([
@@ -46,6 +50,7 @@ const emit = defineEmits([
     'update:themePreference',
     'update:defaultRadarLayers',
     'update:developerSettings',
+    'update:isEditingLayouts',
     'open-sync',
 ])
 
@@ -74,6 +79,11 @@ const devSettings = computed({
     get: () => props.developerSettings,
     set: (val) => emit('update:developerSettings', val),
 })
+
+const startEditingLayout = () => {
+    emit('update:isEditingLayouts', true)
+    isOpen.value = false
+}
 
 const activeTab = ref('general')
 
@@ -183,6 +193,27 @@ const refreshKiosk = async () => {
                                 <option value="Pacific/Honolulu">Hawaii Time (Pacific/Honolulu)</option>
                                 <option value="UTC">UTC</option>
                             </select>
+                        </div>
+                        
+                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
+                            <div class="flex items-center justify-between gap-5">
+                                <div class="flex items-center gap-5">
+                                    <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                        <LayoutGrid class="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-black tracking-tight">Dashboard Layout</h4>
+                                        <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Rearrange tabs & widgets</p>
+                                    </div>
+                                </div>
+                                
+                                <Button 
+                                    @click="startEditingLayout"
+                                    class="h-14 px-6 rounded-2xl font-black text-white bg-indigo-500 hover:bg-indigo-600 transition-all shadow-none"
+                                >
+                                    Edit Layout
+                                </Button>
+                            </div>
                         </div>
                     </div>
 

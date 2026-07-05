@@ -42,7 +42,7 @@ const {
 } = useDashboard()
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
-const editingWorkspaceId = ref(null)
+const isEditingLayouts = ref(false)
 const unpinnedAppId = ref(null)
 const addingToSlotIndex = ref(null)
 
@@ -215,8 +215,8 @@ const handleSyncRequest = (option) => {
 
 const handleAppLaunch = (appId) => {
     // First see if we are editing a workspace to add to it
-    if (editingWorkspaceId.value && addingToSlotIndex.value !== null) {
-        const ws = workspaces.value.find(w => w.id === editingWorkspaceId.value)
+    if (isEditingLayouts.value && addingToSlotIndex.value !== null) {
+        const ws = workspaces.value.find(w => w.id === activeTab.value)
         if (ws) {
             const w = { ...ws, apps: [...ws.apps] }
             w.apps[addingToSlotIndex.value] = appId
@@ -224,7 +224,6 @@ const handleAppLaunch = (appId) => {
             updateWorkspace(ws.id, { apps: w.apps })
             
             activeTab.value = ws.id
-            editingWorkspaceId.value = null
             addingToSlotIndex.value = null
             return
         }
@@ -247,7 +246,7 @@ const handleAddApp = (idx) => {
 }
 
 const handleCloseEdit = () => {
-    editingWorkspaceId.value = null
+    isEditingLayouts.value = false
     addingToSlotIndex.value = null
 }
 
@@ -336,9 +335,9 @@ const handleCycleLayout = (workspace) => {
                 :active-tab="activeTab" 
                 :local-timezone="localTimezone" 
                 :workspaces="workspaces" 
-                :is-editing="editingWorkspaceId === activeTab"
+                :is-editing="isEditingLayouts"
                 @open-settings="isSettingsDialogOpen = true" 
-                @toggle-edit="editingWorkspaceId = editingWorkspaceId ? null : activeTab"
+                @toggle-edit="isEditingLayouts = !isEditingLayouts"
             />
 
             <!-- Global Weather Alerts Banner -->
@@ -386,7 +385,7 @@ const handleCycleLayout = (workspace) => {
                 >
                     <WorkspaceView
                         :workspace="workspace"
-                        :is-editing="editingWorkspaceId === workspace.id"
+                        :is-editing="isEditingLayouts"
                         :events="filteredEvents"
                         :scheduleEvents="filteredScheduleEvents"
                         :activeProfile="activeProfile"
@@ -442,6 +441,7 @@ const handleCycleLayout = (workspace) => {
                 >
                     <OtherTab 
                         :workspaces="workspaces" 
+                        :is-editing="isEditingLayouts"
                         @create-workspace="(appId) => {
                             const newWs = createWorkspace(appId);
                             activeTab = newWs.id;
@@ -460,6 +460,7 @@ const handleCycleLayout = (workspace) => {
             v-model:themePreference="themePreference"
             v-model:defaultRadarLayers="defaultRadarLayers"
             v-model:developerSettings="developerSettings"
+            v-model:is-editing-layouts="isEditingLayouts"
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
