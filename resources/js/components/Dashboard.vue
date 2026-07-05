@@ -273,6 +273,20 @@ const handleRemoveApp = (workspace, idx) => {
     updateWorkspace(workspace.id, { apps: w.apps })
 }
 
+const handleRemoveSlot = (workspace, idx) => {
+    if (workspace.apps.length <= 1) return // Can't remove the last slot
+    
+    const newApps = [...workspace.apps]
+    newApps.splice(idx, 1)
+    
+    let nextLayout = 'full'
+    if (newApps.length === 2) nextLayout = 'split-horizontal'
+    else if (newApps.length === 3) nextLayout = 'sidebar-right'
+    else if (newApps.length === 4) nextLayout = 'grid-2x2'
+    
+    updateWorkspace(workspace.id, { layout: nextLayout, apps: newApps })
+}
+
 const handleSwapApps = (workspace, idx) => {
     const w = { ...workspace, apps: [...workspace.apps] }
     const nextIdx = (idx + 1) % w.apps.length
@@ -388,6 +402,7 @@ const handleCycleLayout = (workspace) => {
                         @add-app="handleAddApp"
                         @close-edit="handleCloseEdit"
                         @add-slot="handleAddSlot(workspace)"
+                        @remove-slot="(idx) => handleRemoveSlot(workspace, idx)"
                         @remove-app="(idx) => handleRemoveApp(workspace, idx)"
                         @swap-apps="(idx) => handleSwapApps(workspace, idx)"
                         @rename-workspace="handleRenameWorkspace(workspace)"

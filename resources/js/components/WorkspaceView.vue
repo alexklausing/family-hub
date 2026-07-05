@@ -35,6 +35,7 @@ const emit = defineEmits([
     'rename-workspace',
     'cycle-layout',
     'add-slot',
+    'remove-slot',
     'close-edit'
 ])
 
@@ -90,16 +91,26 @@ const getSlotClass = (index, total) => {
                     />
                     
                     <!-- Empty Slot Placeholder -->
-                    <div v-else class="w-full h-full flex flex-col items-center justify-center">
+                    <div v-else class="w-full h-full relative flex flex-col items-center justify-center bg-white/5 dark:bg-black/10">
                         <button 
                             v-if="isEditing"
                             @click="emit('add-app', index)"
-                            class="w-full h-full flex flex-col items-center justify-center hover:bg-white/5 transition-colors group cursor-pointer"
+                            class="w-full h-full flex flex-col items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 transition-colors group cursor-pointer"
                         >
                             <div class="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-active:scale-95 transition-transform mb-4">
                                 <Plus class="w-8 h-8" />
                             </div>
                             <span class="text-lg font-bold text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300">Add App to Slot</span>
+                        </button>
+                        
+                        <!-- Remove Slot Button -->
+                        <button 
+                            v-if="isEditing && workspace.apps.length > 1"
+                            @click.stop="emit('remove-slot', index)"
+                            class="absolute top-4 right-4 w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform z-50"
+                            title="Remove Empty Slot"
+                        >
+                            <Trash2 class="w-6 h-6" />
                         </button>
                     </div>
                     
