@@ -44,6 +44,7 @@ const {
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
 const editingWorkspaceId = ref(null)
 const unpinnedAppId = ref(null)
+const addingToSlotIndex = ref(null)
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
@@ -214,21 +215,18 @@ const handleSyncRequest = (option) => {
 
 const handleAppLaunch = (appId) => {
     // First see if we are editing a workspace to add to it
-    if (editingWorkspaceId.value) {
+    if (editingWorkspaceId.value && addingToSlotIndex.value !== null) {
         const ws = workspaces.value.find(w => w.id === editingWorkspaceId.value)
         if (ws) {
             const w = { ...ws, apps: [...ws.apps] }
-            if (w.apps.length < 4) {
-                w.apps.push(appId)
-                updateWorkspace(ws.id, { apps: w.apps })
-                if (w.apps.length > 1 && ws.name === ws.apps[0]) {
-                    const newName = prompt('You added another app. What would you like to name this tab?', ws.name + ' & ' + appId)
-                    if (newName) updateWorkspace(ws.id, { name: newName })
-                }
-                activeTab.value = ws.id
-                editingWorkspaceId.value = null
-                return
-            }
+            w.apps[addingToSlotIndex.value] = appId
+            
+            updateWorkspace(ws.id, { apps: w.apps })
+            
+            activeTab.value = ws.id
+            editingWorkspaceId.value = null
+            addingToSlotIndex.value = null
+            return
         }
     }
     
@@ -247,7 +245,7 @@ const handleAppLaunch = (appId) => {
 <template>
     <div
         class="flex h-screen max-h-screen flex-col overflow-hidden bg-[#f2f2f7] text-black dark:text-white p-4 font-sans transition-colors duration-500 lg:p-6 dark:bg-[#000000]"
-        @click="editingWorkspaceId = null"
+        @click="() => { editingWorkspaceId = null; addingToSlotIndex = null; }"
     >
         <!-- Full Screen Aura Overlay -->
         <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'aura'" class="fixed inset-0 z-[100] bg-black">
@@ -327,17 +325,21 @@ const handleAppLaunch = (appId) => {
                         @toggle-calendar="toggleCalendar"
                         @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
-                        @add-app="activeTab = 'other'"
+                        @add-app="(idx) => {
+                            addingToSlotIndex.value = idx;
+                            activeTab = 'other';
+                        }"
                         @remove-app="(idx) => {
                             const w = { ...workspace, apps: [...workspace.apps] };
-                            w.apps.splice(idx, 1);
+                            w.apps[idx] = null;
                             updateWorkspace(workspace.id, { apps: w.apps });
                         }"
-                        @swap-apps="(payload) => {
+                        @swap-apps="(idx) => {
                             const w = { ...workspace, apps: [...workspace.apps] };
-                            const temp = w.apps[payload.from];
-                            w.apps[payload.from] = w.apps[payload.to];
-                            w.apps[payload.to] = temp;
+                            const nextIdx = (idx + 1) % w.apps.length;
+                            const temp = w.apps[idx];
+                            w.apps[idx] = w.apps[nextIdx];
+                            w.apps[nextIdx] = temp;
                             updateWorkspace(workspace.id, { apps: w.apps });
                         }"
                         @rename-workspace="() => {
@@ -345,16 +347,18 @@ const handleAppLaunch = (appId) => {
                             if (newName) updateWorkspace(workspace.id, { name: newName });
                         }"
                         @cycle-layout="() => {
-                            const current = workspace.layout || 'default';
-                            let next = 'default';
-                            if (workspace.apps.length === 2) {
-                                next = (current === 'split-horizontal') ? 'split-vertical' : 'split-horizontal';
-                            } else if (workspace.apps.length === 3) {
-                                const order = ['sidebar-right', 'sidebar-left', 'rows'];
-                                const idx = Math.max(0, order.indexOf(current));
-                                next = order[(idx + 1) % order.length];
-                            }
-                            updateWorkspace(workspace.id, { layout: next });
+                            const current = workspace.layout || 'full';
+                            const order = ['full', 'split-vertical', 'split-horizontal', 'sidebar-right', 'sidebar-left', 'grid-2x2'];
+                            const next = order[(order.indexOf(current) + 1) % order.length];
+                            
+                            const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 };
+                            const targetSlots = slotsMap[next];
+                            
+                            const newApps = [...workspace.apps];
+                            while (newApps.length < targetSlots) newApps.push(null);
+                            if (newApps.length > targetSlots) newApps.length = targetSlots;
+                            
+                            updateWorkspace(workspace.id, { layout: next, apps: newApps });
                         }"
                     />
                 </TabsContent>
