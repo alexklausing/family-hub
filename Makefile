@@ -146,6 +146,7 @@ deploy:
 	@echo "📦 Syncing Node dependencies..."
 	npm install
 	@echo "🏗️ Building frontend assets..."
+	rm -f public/hot
 	npm run build
 	@echo "🌱 Running database migrations..."
 	$(SAIL_CMD) artisan migrate --force
