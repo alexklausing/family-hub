@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue'
-import { Plus, X, Pencil, ArrowLeftRight, ArrowUpDown, LayoutTemplate, Check, Trash2, Minus } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { Plus, X, Pencil, LayoutTemplate, Check, Trash2, Minus } from 'lucide-vue-next'
 import AppRenderer from './AppRenderer.vue'
 
 const props = defineProps({
@@ -61,6 +61,23 @@ const getSlotClass = (index, total) => {
     }
     return ''
 }
+
+const dragOverIndex = ref(null)
+
+const onDragStart = (e, index) => {
+    if (!props.isEditing) return
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', index.toString())
+}
+
+const onDrop = (e, dropIndex) => {
+    if (!props.isEditing) return
+    dragOverIndex.value = null
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'))
+    if (!isNaN(dragIndex) && dragIndex !== dropIndex) {
+        emit('swap-apps', dragIndex, dropIndex)
+    }
+}
 </script>
 
 <template>
@@ -70,7 +87,18 @@ const getSlotClass = (index, total) => {
                 <div 
                     v-for="(appId, index) in workspace.apps" 
                     :key="`${workspace.id}-${index}`"
-                    :class="['relative min-h-0 min-w-0 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden', getSlotClass(index, workspace.apps.length)]"
+                    :draggable="isEditing"
+                    @dragstart="onDragStart($event, index)"
+                    @dragover.prevent
+                    @dragenter="dragOverIndex = index"
+                    @dragleave="dragOverIndex === index ? dragOverIndex = null : null"
+                    @drop="onDrop($event, index)"
+                    :class="[
+                        'relative min-h-0 min-w-0 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden transition-all duration-200', 
+                        getSlotClass(index, workspace.apps.length),
+                        isEditing ? 'cursor-grab active:cursor-grabbing' : '',
+                        dragOverIndex === index ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-slate-100 dark:ring-offset-slate-900 scale-[0.98]' : ''
+                    ]"
                 >
                     <AppRenderer
                         v-if="appId"
@@ -122,20 +150,6 @@ const getSlotClass = (index, total) => {
                             title="Remove App"
                         >
                             <Minus class="w-8 h-8" stroke-width="3" />
-                        </button>
-                        <button 
-                            v-if="workspace.apps.length > 1"
-                            @click="emit('swap-apps', index)"
-                            class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform"
-                        >
-                            <ArrowLeftRight class="w-8 h-8" />
-                        </button>
-                        <button 
-                            v-if="workspace.apps.length > 1"
-                            @click="emit('swap-apps', index)"
-                            class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform"
-                        >
-                            <ArrowUpDown class="w-8 h-8" />
                         </button>
                     </div>
                 </div>

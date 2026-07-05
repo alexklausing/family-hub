@@ -287,12 +287,11 @@ const handleRemoveSlot = (workspace, idx) => {
     updateWorkspace(workspace.id, { layout: nextLayout, apps: newApps })
 }
 
-const handleSwapApps = (workspace, idx) => {
+const handleSwapApps = (workspace, fromIdx, toIdx) => {
     const w = { ...workspace, apps: [...workspace.apps] }
-    const nextIdx = (idx + 1) % w.apps.length
-    const temp = w.apps[idx]
-    w.apps[idx] = w.apps[nextIdx]
-    w.apps[nextIdx] = temp
+    const temp = w.apps[fromIdx]
+    w.apps[fromIdx] = w.apps[toIdx]
+    w.apps[toIdx] = temp
     updateWorkspace(workspace.id, { apps: w.apps })
 }
 
@@ -302,18 +301,20 @@ const handleRenameWorkspace = (workspace) => {
 }
 
 const handleCycleLayout = (workspace) => {
-    const current = workspace.layout || 'full'
-    const order = ['full', 'split-vertical', 'split-horizontal', 'sidebar-right', 'sidebar-left', 'grid-2x2']
-    const next = order[(order.indexOf(current) + 1) % order.length]
+    const currentCount = workspace.apps.length
+    let next = workspace.layout || 'full'
     
-    const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 }
-    const targetSlots = slotsMap[next]
+    if (currentCount === 2) {
+        next = next === 'split-vertical' ? 'split-horizontal' : 'split-vertical'
+    } else if (currentCount === 3) {
+        next = next === 'sidebar-right' ? 'sidebar-left' : 'sidebar-right'
+    } else if (currentCount === 4) {
+        next = 'grid-2x2'
+    }
     
-    const newApps = [...workspace.apps]
-    while (newApps.length < targetSlots) newApps.push(null)
-    if (newApps.length > targetSlots) newApps.length = targetSlots
-    
-    updateWorkspace(workspace.id, { layout: next, apps: newApps })
+    if (next !== workspace.layout) {
+        updateWorkspace(workspace.id, { layout: next })
+    }
 }
 </script>
 
@@ -404,7 +405,7 @@ const handleCycleLayout = (workspace) => {
                         @add-slot="handleAddSlot(workspace)"
                         @remove-slot="(idx) => handleRemoveSlot(workspace, idx)"
                         @remove-app="(idx) => handleRemoveApp(workspace, idx)"
-                        @swap-apps="(idx) => handleSwapApps(workspace, idx)"
+                        @swap-apps="(fromIdx, toIdx) => handleSwapApps(workspace, fromIdx, toIdx)"
                         @rename-workspace="handleRenameWorkspace(workspace)"
                         @cycle-layout="handleCycleLayout(workspace)"
                     />
