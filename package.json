@@ -45,6 +45,7 @@
         "leaflet": "^1.9.4",
         "lucide-vue-next": "^1.0.0",
         "luxon": "^3.7.2",
+        "mobile-drag-drop": "^3.0.0-rc.0",
         "radix-vue": "^1.9.17",
         "reka-ui": "^2.9.10",
         "shadcn-vue": "^2.7.4",
