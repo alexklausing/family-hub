@@ -4,11 +4,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Home, User, AlertTriangle, X, BellOff } from 'lucide-vue-next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import CalendarTab from './CalendarTab.vue'
-import RecipeBrowser from './recipes/RecipeBrowser.vue'
-import ShoppingList from './shopping/ShoppingList.vue'
-import WeatherTab from './WeatherTab.vue'
-import ChoresTab from './chores/ChoresTab.vue'
+import WorkspaceView from './WorkspaceView.vue'
 import OtherTab from './OtherTab.vue'
 
 // Extracted Subcomponents & Composable
@@ -21,7 +17,34 @@ import { useWeather } from '@/composables/useWeather'
 
 const { alerts, fetchWeather, weatherData } = useWeather()
 
-const activeTab = ref('family')
+const { alerts, fetchWeather, weatherData } = useWeather()
+
+const {
+    isSettingsDialogOpen,
+    isSyncModalOpen,
+    syncOption,
+    activeProfile,
+    availableCalendars,
+    visibleCalendarIds,
+    isSyncing,
+    filteredEvents,
+    filteredScheduleEvents,
+    fetchEvents,
+    toggleCalendar,
+    handleSync,
+    localTimezone,
+    saveFilters,
+    defaultCalendarId,
+    reorderCalendars,
+    workspaces,
+    createWorkspace,
+    removeWorkspace,
+    updateWorkspace
+} = useDashboard()
+
+const activeTab = ref(workspaces.value?.[0]?.id || 'other')
+const editingWorkspaceId = ref(null)
+
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
 
@@ -168,24 +191,7 @@ onUnmounted(() => {
     if (kioskInterval) clearInterval(kioskInterval)
 })
 
-const {
-    isSettingsDialogOpen,
-    isSyncModalOpen,
-    syncOption,
-    activeProfile,
-    availableCalendars,
-    visibleCalendarIds,
-    isSyncing,
-    filteredEvents,
-    filteredScheduleEvents,
-    fetchEvents,
-    toggleCalendar,
-    handleSync,
-    localTimezone,
-    saveFilters,
-    defaultCalendarId,
-    reorderCalendars,
-} = useDashboard()
+// (Moved up for activeTab init)
 
 // Profiles definition (static layout configuration)
 const profiles = [
@@ -210,10 +216,11 @@ const handleSyncRequest = (option) => {
 <template>
     <div
         class="flex h-screen max-h-screen flex-col overflow-hidden bg-[#f2f2f7] text-black dark:text-white p-4 font-sans transition-colors duration-500 lg:p-6 dark:bg-[#000000]"
+        @click="editingWorkspaceId = null"
     >
         <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-6">
             <!-- Header Island Component -->
-            <DashboardHeader :active-tab="activeTab" :local-timezone="localTimezone" @open-settings="isSettingsDialogOpen = true" />
+            <DashboardHeader :active-tab="activeTab" :local-timezone="localTimezone" :workspaces="workspaces" @open-settings="isSettingsDialogOpen = true" />
 
             <!-- Global Weather Alerts Banner -->
             <div v-if="isBannerVisible" class="shrink-0 -mt-2">
@@ -250,13 +257,18 @@ const handleSyncRequest = (option) => {
             </div>
 
             <!-- Main Content Area -->
-            <div class="relative min-h-0 flex-1 overflow-hidden">
-                <!-- Dynamic Content -->
+            <div class="relative min-h-0 flex-1 overflow-hidden" @click.stop>
+                <!-- Dynamic Content Workspaces -->
                 <TabsContent
-                    value="family"
+                    v-for="workspace in workspaces"
+                    :key="workspace.id"
+                    :value="workspace.id"
                     class="m-0 h-full p-0 focus-visible:ring-0"
+                    @contextmenu.prevent="editingWorkspaceId = workspace.id"
                 >
-                    <CalendarTab
+                    <WorkspaceView
+                        :workspace="workspace"
+                        :is-editing="editingWorkspaceId === workspace.id"
                         :events="filteredEvents"
                         :scheduleEvents="filteredScheduleEvents"
                         :activeProfile="activeProfile"
@@ -270,38 +282,23 @@ const handleSyncRequest = (option) => {
                         @toggle-calendar="toggleCalendar"
                         @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
-                    />
-                </TabsContent>
-
-                <TabsContent
-                    value="weather"
-                    class="m-0 h-full p-0 focus-visible:ring-0"
-                >
-                    <WeatherTab />
-                </TabsContent>
-
-                <TabsContent
-                    value="recipes"
-                    class="m-0 h-full p-0 focus-visible:ring-0"
-                >
-                    <RecipeBrowser />
-                </TabsContent>
-
-                <TabsContent
-                    value="shopping"
-                    class="m-0 h-full p-0 focus-visible:ring-0"
-                >
-                    <ShoppingList />
-                </TabsContent>
-
-                <TabsContent
-                    value="chores"
-                    class="m-0 h-full p-0 focus-visible:ring-0"
-                >
-                    <ChoresTab
-                        :profiles="profiles"
-                        :activeProfile="activeProfile"
-                        @update:activeProfile="activeProfile = $event"
+                        @add-app="activeTab = 'other'"
+                        @remove-app="(idx) => {
+                            const w = { ...workspace, apps: [...workspace.apps] };
+                            w.apps.splice(idx, 1);
+                            updateWorkspace(workspace.id, { apps: w.apps });
+                        }"
+                        @swap-apps="(payload) => {
+                            const w = { ...workspace, apps: [...workspace.apps] };
+                            const temp = w.apps[payload.from];
+                            w.apps[payload.from] = w.apps[payload.to];
+                            w.apps[payload.to] = temp;
+                            updateWorkspace(workspace.id, { apps: w.apps });
+                        }"
+                        @rename-workspace="() => {
+                            const newName = prompt('Enter a new name for this workspace:', workspace.name);
+                            if (newName) updateWorkspace(workspace.id, { name: newName });
+                        }"
                     />
                 </TabsContent>
 
@@ -309,7 +306,44 @@ const handleSyncRequest = (option) => {
                     value="other"
                     class="m-0 h-full p-0 focus-visible:ring-0"
                 >
-                    <OtherTab />
+                    <OtherTab 
+                        :workspaces="workspaces" 
+                        @create-workspace="(appId) => {
+                            const newWs = createWorkspace(appId);
+                            activeTab = newWs.id;
+                        }"
+                        @remove-workspace="removeWorkspace"
+                        @launch="(appId) => {
+                            // First see if we are editing a workspace to add to it
+                            if (editingWorkspaceId) {
+                                const ws = workspaces.find(w => w.id === editingWorkspaceId);
+                                if (ws) {
+                                    const w = { ...ws, apps: [...ws.apps] };
+                                    if (w.apps.length < 4) {
+                                        w.apps.push(appId);
+                                        updateWorkspace(ws.id, { apps: w.apps });
+                                        if (w.apps.length > 1 && ws.name === ws.apps[0]) {
+                                            const newName = prompt('You added another app. What would you like to name this tab?', ws.name + ' & ' + appId);
+                                            if (newName) updateWorkspace(ws.id, { name: newName });
+                                        }
+                                        activeTab = ws.id;
+                                        editingWorkspaceId = null;
+                                        return;
+                                    }
+                                }
+                            }
+                            
+                            // Otherwise just switch to the first workspace containing this app
+                            const existingWs = workspaces.find(w => w.apps.includes(appId));
+                            if (existingWs) {
+                                activeTab = existingWs.id;
+                            } else {
+                                // Create temporary or new workspace if it doesn't exist
+                                const newWs = createWorkspace(appId);
+                                activeTab = newWs.id;
+                            }
+                        }"
+                    />
                 </TabsContent>
             </div>
         </Tabs>

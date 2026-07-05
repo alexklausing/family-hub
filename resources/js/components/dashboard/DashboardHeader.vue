@@ -29,6 +29,10 @@ const props = defineProps({
         type: String,
         default: 'America/New_York',
     },
+    workspaces: {
+        type: Array,
+        default: () => [],
+    }
 })
 
 const emit = defineEmits(['open-settings'])
@@ -53,6 +57,15 @@ const getWeatherIcon = (description) => {
     if (desc.includes('snow') || desc.includes('ice')) return CloudSnow
     if (desc.includes('cloud') || desc.includes('overcast')) return Cloud
     return Sun
+}
+
+const tabConfig = {
+    family: { label: 'Calendar', icon: Calendar },
+    weather: { label: 'Weather', icon: CloudSun },
+    recipes: { label: 'Recipes', icon: ChefHat },
+    shopping: { label: 'Shopping', icon: ShoppingBag },
+    chores: { label: 'Chores', icon: CheckSquare },
+    aura: { label: 'Aura', icon: ImageIcon },
 }
 
 const currentTime = ref('')
@@ -114,43 +127,18 @@ onUnmounted(() => {
         </div>
 
         <TabsList
-            class="h-16 w-fit rounded-3xl border-none bg-white/40 p-1.5 shadow-none backdrop-blur-2xl dark:bg-white/5"
+            class="h-16 w-fit max-w-full overflow-x-auto custom-scrollbar rounded-3xl border-none bg-white/40 p-1.5 shadow-none backdrop-blur-2xl dark:bg-white/5"
         >
             <TabsTrigger
-                value="family"
-                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
+                v-for="workspace in props.workspaces"
+                :key="workspace.id"
+                :value="workspace.id"
+                class="h-full flex-1 min-w-fit px-4 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
             >
-                <Calendar class="h-5 w-5" />
-                <span class="hidden lg:inline">Calendar</span>
+                <component :is="workspace.apps.length > 0 ? (tabConfig[workspace.apps[0]]?.icon || LayoutGrid) : LayoutGrid" class="h-5 w-5 shrink-0" />
+                <span class="hidden lg:inline truncate">{{ workspace.name }}</span>
             </TabsTrigger>
-            <TabsTrigger
-                value="weather"
-                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
-            >
-                <CloudSun class="h-5 w-5" />
-                <span class="hidden lg:inline">Weather</span>
-            </TabsTrigger>
-            <TabsTrigger
-                value="recipes"
-                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
-            >
-                <ChefHat class="h-5 w-5" />
-                <span class="hidden lg:inline">Recipes</span>
-            </TabsTrigger>
-            <TabsTrigger
-                value="shopping"
-                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
-            >
-                <ShoppingBag class="h-5 w-5" />
-                <span class="hidden lg:inline">Shopping</span>
-            </TabsTrigger>
-            <TabsTrigger
-                value="chores"
-                class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
-            >
-                <CheckSquare class="h-5 w-5" />
-                <span class="hidden lg:inline">Chores</span>
-            </TabsTrigger>
+            
             <TabsTrigger
                 value="other"
                 class="h-full flex-1 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"

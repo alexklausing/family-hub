@@ -17,12 +17,46 @@ export function useDashboard() {
     // Timezone
     const localTimezone = ref(
         Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
-    )
+    // Workspaces
+    const workspaces = ref([])
 
-    // Calendar Order
-    const calendarOrder = ref([])
+    const getAppName = (id) => {
+        const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura' }
+        return names[id] || id
+    }
 
     const loadFilters = () => {
+        const savedWorkspaces = localStorage.getItem('dashboard_workspaces')
+        if (savedWorkspaces) {
+            try {
+                const parsed = JSON.parse(savedWorkspaces)
+                // Migration: if they have old pinned tabs format (array of strings)
+                if (parsed.length > 0 && typeof parsed[0] === 'string') {
+                    workspaces.value = parsed.map((appId, index) => ({
+                        id: 'ws_' + index + '_' + Math.random().toString(36).substring(2, 9),
+                        name: getAppName(appId),
+                        layout: 'full',
+                        apps: [appId]
+                    }))
+                    saveFilters()
+                } else {
+                    workspaces.value = parsed
+                }
+            } catch (e) {
+                console.error(e)
+            }
+        } else {
+            // Default Workspaces
+            workspaces.value = [
+                { id: 'ws_family', name: 'Calendar', layout: 'full', apps: ['family'] },
+                { id: 'ws_weather', name: 'Weather', layout: 'full', apps: ['weather'] },
+                { id: 'ws_recipes', name: 'Recipes', layout: 'full', apps: ['recipes'] },
+                { id: 'ws_shopping', name: 'Shopping', layout: 'full', apps: ['shopping'] },
+                { id: 'ws_chores', name: 'Chores', layout: 'full', apps: ['chores'] },
+            ]
+            saveFilters()
+        }
+
         const saved = localStorage.getItem('dashboard_filters_map')
         if (saved) filtersByProfile.value = JSON.parse(saved)
 
@@ -43,6 +77,35 @@ export function useDashboard() {
             'dashboard_calendar_order',
             JSON.stringify(calendarOrder.value),
         )
+        localStorage.setItem(
+            'dashboard_workspaces',
+            JSON.stringify(workspaces.value)
+        )
+    }
+
+    const createWorkspace = (appId) => {
+        const newWs = {
+            id: 'ws_' + Math.random().toString(36).substring(2, 9),
+            name: getAppName(appId),
+            layout: 'full',
+            apps: [appId]
+        }
+        workspaces.value.push(newWs)
+        saveFilters()
+        return newWs
+    }
+
+    const removeWorkspace = (workspaceId) => {
+        workspaces.value = workspaces.value.filter(ws => ws.id !== workspaceId)
+        saveFilters()
+    }
+
+    const updateWorkspace = (workspaceId, updates) => {
+        const ws = workspaces.value.find(w => w.id === workspaceId)
+        if (ws) {
+            Object.assign(ws, updates)
+            saveFilters()
+        }
     }
 
     const visibleCalendarIds = computed(() => {
@@ -237,5 +300,9 @@ export function useDashboard() {
         toggleCalendar,
         handleSync,
         defaultCalendarId,
+        workspaces,
+        createWorkspace,
+        removeWorkspace,
+        updateWorkspace
     }
 }

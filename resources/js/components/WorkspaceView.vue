@@ -1,0 +1,136 @@
+<script setup>
+import { computed } from 'vue'
+import { Plus, X, Pencil, ArrowLeftRight } from 'lucide-vue-next'
+import AppRenderer from './AppRenderer.vue'
+
+const props = defineProps({
+    workspace: {
+        type: Object,
+        required: true
+    },
+    isEditing: {
+        type: Boolean,
+        default: false
+    },
+    // Dashboard Global Props (passed down to AppRenderer)
+    events: Array,
+    scheduleEvents: Array,
+    activeProfile: String,
+    profiles: Array,
+    availableCalendars: Array,
+    defaultCalendarId: [Number, String, null],
+    visibleCalendarIds: Array,
+    localTimezone: String,
+})
+
+const emit = defineEmits([
+    'update:activeProfile',
+    'update:defaultCalendar',
+    'toggle-calendar',
+    'reorder-calendars',
+    'range-changed',
+    'add-app',
+    'remove-app',
+    'swap-apps',
+    'rename-workspace'
+])
+
+// A workspace object looks like:
+// { id: 'ws1', name: 'Weather', layout: 'full', apps: ['weather'] }
+// Layout can be 'full', 'split', 'sidebar'
+
+const layoutClass = computed(() => {
+    const appsCount = props.workspace.apps.length
+    if (appsCount === 0) return 'flex items-center justify-center'
+    if (appsCount === 1) return 'grid grid-cols-1 grid-rows-1'
+    if (appsCount === 2) return 'grid grid-cols-2 grid-rows-1 gap-6'
+    if (appsCount === 3) return 'grid grid-cols-2 grid-rows-2 gap-6'
+    return 'grid grid-cols-2 grid-rows-2 gap-6' // Fallback for 4
+})
+
+const getSlotClass = (index, total) => {
+    if (total === 3 && index === 0) return 'row-span-2'
+    return ''
+}
+</script>
+
+<template>
+    <div class="relative w-full h-full p-2">
+        <div :class="['w-full h-full', layoutClass]">
+            <template v-if="workspace.apps.length > 0">
+                <div 
+                    v-for="(appId, index) in workspace.apps" 
+                    :key="`${workspace.id}-${index}`"
+                    :class="['relative min-h-0 min-w-0', getSlotClass(index, workspace.apps.length)]"
+                >
+                    <AppRenderer
+                        :app-id="appId"
+                        :events="events"
+                        :scheduleEvents="scheduleEvents"
+                        :activeProfile="activeProfile"
+                        :profiles="profiles"
+                        :availableCalendars="availableCalendars"
+                        :defaultCalendarId="defaultCalendarId"
+                        :visibleCalendarIds="visibleCalendarIds"
+                        :localTimezone="localTimezone"
+                        @update:activeProfile="emit('update:activeProfile', $event)"
+                        @update:defaultCalendar="emit('update:defaultCalendar', $event)"
+                        @toggle-calendar="emit('toggle-calendar', $event)"
+                        @reorder-calendars="emit('reorder-calendars', $event)"
+                        @range-changed="emit('range-changed', $event)"
+                    />
+                    
+                    <!-- Edit Mode Overlay for this Slot -->
+                    <div v-if="isEditing" class="absolute inset-0 bg-black/40 backdrop-blur-[2px] rounded-3xl z-50 flex items-center justify-center gap-4 animate-in fade-in duration-200">
+                        <button 
+                            @click="emit('remove-app', index)"
+                            class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform"
+                        >
+                            <X class="w-8 h-8" />
+                        </button>
+                        <button 
+                            v-if="workspace.apps.length > 1 && index > 0"
+                            @click="emit('swap-apps', { from: index, to: index - 1 })"
+                            class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform"
+                        >
+                            <ArrowLeftRight class="w-8 h-8" />
+                        </button>
+                    </div>
+                </div>
+            </template>
+            <template v-else>
+                <!-- Empty State -->
+                <div class="w-full h-full flex flex-col items-center justify-center bg-white/50 dark:bg-white/5 rounded-3xl border-4 border-dashed border-slate-300 dark:border-slate-800">
+                    <p class="text-2xl font-bold text-slate-400">Empty Workspace</p>
+                </div>
+            </template>
+            
+            <!-- Add App Button Slot (Only visible in edit mode if less than 3 apps) -->
+            <div 
+                v-if="isEditing && workspace.apps.length < 3"
+                class="relative min-h-0 min-w-0"
+            >
+                <button 
+                    @click="emit('add-app')"
+                    class="w-full h-full flex flex-col items-center justify-center bg-white/50 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 rounded-3xl border-4 border-dashed border-slate-300 dark:border-slate-700 transition-colors group cursor-pointer"
+                >
+                    <div class="w-20 h-20 bg-indigo-500 rounded-full flex items-center justify-center text-white shadow-lg group-hover:scale-110 group-active:scale-95 transition-transform mb-4">
+                        <Plus class="w-10 h-10" />
+                    </div>
+                    <span class="text-xl font-bold text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300">Add App</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Global Edit Actions for this Workspace -->
+        <div v-if="isEditing" class="absolute -top-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black px-6 py-3 rounded-full shadow-2xl animate-in slide-in-from-top-4 duration-300">
+            <span class="font-black text-lg tracking-wide mr-2">{{ workspace.name }}</span>
+            <button 
+                @click="emit('rename-workspace')"
+                class="p-2 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
+            >
+                <Pencil class="w-5 h-5" />
+            </button>
+        </div>
+    </div>
+</template>
