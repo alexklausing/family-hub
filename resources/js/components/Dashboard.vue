@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button'
 import WorkspaceView from './WorkspaceView.vue'
 import OtherTab from './OtherTab.vue'
+import AuraTab from './AuraTab.vue'
 
 // Extracted Subcomponents & Composable
 import { useDashboard } from './dashboard/useDashboard'
@@ -42,6 +43,7 @@ const {
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
 const editingWorkspaceId = ref(null)
+const unpinnedAppId = ref(null)
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
@@ -216,6 +218,14 @@ const handleSyncRequest = (option) => {
         class="flex h-screen max-h-screen flex-col overflow-hidden bg-[#f2f2f7] text-black dark:text-white p-4 font-sans transition-colors duration-500 lg:p-6 dark:bg-[#000000]"
         @click="editingWorkspaceId = null"
     >
+        <!-- Full Screen Aura Overlay -->
+        <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'aura'" class="fixed inset-0 z-[100] bg-black">
+            <button @click="activeTab = 'other'" class="absolute top-6 left-6 z-[110] p-4 bg-white/10 hover:bg-white/30 text-white rounded-full backdrop-blur-md transition-colors">
+                <X class="w-8 h-8" />
+            </button>
+            <AuraTab />
+        </div>
+
         <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-6">
             <!-- Header Island Component -->
             <DashboardHeader 
@@ -318,6 +328,31 @@ const handleSyncRequest = (option) => {
                     />
                 </TabsContent>
 
+                <!-- Unpinned App View -->
+                <TabsContent
+                    value="unpinned"
+                    class="m-0 h-full p-0 focus-visible:ring-0"
+                >
+                    <WorkspaceView
+                        v-if="unpinnedAppId && unpinnedAppId !== 'aura'"
+                        :workspace="{ id: 'unpinned', name: 'Temporary', layout: 'full', apps: [unpinnedAppId] }"
+                        :is-editing="false"
+                        :events="filteredEvents"
+                        :scheduleEvents="filteredScheduleEvents"
+                        :activeProfile="activeProfile"
+                        :profiles="profiles"
+                        :availableCalendars="availableCalendars"
+                        :defaultCalendarId="defaultCalendarId"
+                        :visibleCalendarIds="visibleCalendarIds"
+                        :localTimezone="localTimezone"
+                        @update:activeProfile="activeProfile = $event"
+                        @update:defaultCalendar="defaultCalendarId = $event"
+                        @toggle-calendar="toggleCalendar"
+                        @reorder-calendars="reorderCalendars"
+                        @range-changed="(r) => fetchEvents(r.start, r.end)"
+                    />
+                </TabsContent>
+
                 <TabsContent
                     value="other"
                     class="m-0 h-full p-0 focus-visible:ring-0"
@@ -354,9 +389,9 @@ const handleSyncRequest = (option) => {
                             if (existingWs) {
                                 activeTab = existingWs.id;
                             } else {
-                                // Create temporary or new workspace if it doesn't exist
-                                const newWs = createWorkspace(appId);
-                                activeTab = newWs.id;
+                                // Do not automatically pin. Just display it temporarily.
+                                unpinnedAppId.value = appId;
+                                activeTab = 'unpinned';
                             }
                         }"
                     />
