@@ -140,6 +140,7 @@ cli:
 # Pull latest changes and sync the environment
 deploy:
 	@echo "⬇️ Pulling latest code from GitHub..."
+	git reset --hard HEAD
 	git pull origin main
 	@echo "📦 Syncing PHP dependencies..."
 	$(SAIL_CMD) composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
