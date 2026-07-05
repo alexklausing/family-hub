@@ -17,6 +17,7 @@ import {
     Telescope,
     Radar,
     LayoutGrid,
+    ImageIcon,
 } from 'lucide-vue-next'
 import { useWeather } from '@/composables/useWeather'
 
