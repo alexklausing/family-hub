@@ -98,12 +98,8 @@ const buttonEvents = (appId) => {
                 class="relative flex flex-col items-center justify-center gap-3 outline-none select-none touch-none"
             >
                 <div 
-                    class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] flex items-center justify-center shadow-xl transition-all duration-300"
-                    :class="[
-                        isAppPinned(app.id) 
-                            ? [app.color, 'text-white scale-100 ring-4 ring-offset-4 ring-offset-[#f2f2f7] dark:ring-offset-black ring-slate-200 dark:ring-slate-800'] 
-                            : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 scale-95 opacity-60 grayscale'
-                    ]"
+                    class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[2rem] flex items-center justify-center shadow-xl transition-all duration-300 text-white scale-100"
+                    :class="app.color"
                 >
                     <component :is="app.icon" class="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-md" />
                     
@@ -115,10 +111,7 @@ const buttonEvents = (appId) => {
                         <Pin class="w-3.5 h-3.5" stroke-width="3" />
                     </div>
                 </div>
-                <span 
-                    class="text-base font-bold transition-colors duration-300"
-                    :class="isAppPinned(app.id) ? 'text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-500'"
-                >
+                <span class="text-base font-bold text-slate-800 dark:text-white transition-colors duration-300">
                     {{ app.name }}
                 </span>
             </button>
