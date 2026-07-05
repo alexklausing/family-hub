@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Plus, X, Pencil, ArrowLeftRight, ArrowUpDown, LayoutTemplate, Check } from 'lucide-vue-next'
+import { Plus, X, Pencil, ArrowLeftRight, ArrowUpDown, LayoutTemplate, Check, Trash2 } from 'lucide-vue-next'
 import AppRenderer from './AppRenderer.vue'
 
 const props = defineProps({
@@ -108,8 +108,9 @@ const getSlotClass = (index, total) => {
                         <button 
                             @click="emit('remove-app', index)"
                             class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-110 active:scale-95 transition-transform"
+                            title="Remove App"
                         >
-                            <X class="w-8 h-8" />
+                            <Trash2 class="w-8 h-8" />
                         </button>
                         <button 
                             v-if="workspace.apps.length > 1"
