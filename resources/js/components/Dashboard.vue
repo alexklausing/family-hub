@@ -38,7 +38,11 @@ const {
     workspaces,
     createWorkspace,
     removeWorkspace,
-    updateWorkspace
+    updateWorkspace,
+    reorderWorkspaces,
+    resetWorkspaces,
+    unusedApps,
+    toggleAppActive
 } = useDashboard()
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
@@ -250,6 +254,13 @@ const handleCloseEdit = () => {
     addingToSlotIndex.value = null
 }
 
+const handleToggleEdit = () => {
+    isEditingLayouts.value = !isEditingLayouts.value
+    if (!isEditingLayouts.value) {
+        addingToSlotIndex.value = null
+    }
+}
+
 const handleAddSlot = (workspace) => {
     const current = workspace.layout || 'full'
     let next = current
@@ -337,7 +348,8 @@ const handleCycleLayout = (workspace) => {
                 :workspaces="workspaces" 
                 :is-editing="isEditingLayouts"
                 @open-settings="isSettingsDialogOpen = true" 
-                @toggle-edit="isEditingLayouts = !isEditingLayouts"
+                @toggle-edit="handleToggleEdit"
+                @reorder-workspaces="reorderWorkspaces"
             />
 
             <!-- Global Weather Alerts Banner -->
@@ -442,6 +454,9 @@ const handleCycleLayout = (workspace) => {
                     <OtherTab 
                         :workspaces="workspaces" 
                         :is-editing="isEditingLayouts"
+                        :is-adding-to-slot="addingToSlotIndex !== null"
+                        :unused-apps="unusedApps"
+                        @toggle-active="toggleAppActive"
                         @create-workspace="(appId) => {
                             const newWs = createWorkspace(appId);
                             activeTab = newWs.id;
@@ -464,6 +479,7 @@ const handleCycleLayout = (workspace) => {
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
+            @reset-layouts="() => { resetWorkspaces(); activeTab = workspaces[0]?.id || 'other'; }"
         />
 
         <!-- Smart Sync Selection Dialog Component -->

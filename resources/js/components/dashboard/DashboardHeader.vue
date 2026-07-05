@@ -42,7 +42,24 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['open-settings', 'toggle-edit'])
+const emit = defineEmits(['open-settings', 'toggle-edit', 'reorder-workspaces'])
+
+const dragOverIndex = ref(null)
+
+const onDragStart = (e, index) => {
+    if (!props.isEditing) return
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', index.toString())
+}
+
+const onDrop = (e, dropIndex) => {
+    if (!props.isEditing) return
+    dragOverIndex.value = null
+    const dragIndex = parseInt(e.dataTransfer.getData('text/plain'))
+    if (!isNaN(dragIndex) && dragIndex !== dropIndex) {
+        emit('reorder-workspaces', dragIndex, dropIndex)
+    }
+}
 
 const weatherView = inject('weatherView')
 
@@ -137,10 +154,21 @@ onUnmounted(() => {
             class="h-16 w-fit max-w-full overflow-x-auto custom-scrollbar rounded-3xl border-none bg-white/40 p-1.5 shadow-none backdrop-blur-2xl dark:bg-white/5"
         >
             <TabsTrigger
-                v-for="workspace in props.workspaces"
+                v-for="(workspace, index) in props.workspaces"
                 :key="workspace.id"
                 :value="workspace.id"
-                class="h-full flex-1 min-w-fit px-4 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none"
+                :draggable="props.isEditing"
+                @dragstart="onDragStart($event, index)"
+                @dragover.prevent
+                @dragenter="dragOverIndex = index"
+                @dragleave="dragOverIndex === index ? dragOverIndex = null : null"
+                @drop="onDrop($event, index)"
+                :class="[
+                    'h-full flex-1 min-w-fit px-4 gap-2 rounded-2xl text-lg font-black data-[state=active]:shadow-none transition-all',
+                    props.isEditing ? 'cursor-grab active:cursor-grabbing animate-jiggle origin-center shadow-md' : '',
+                    dragOverIndex === index ? 'ring-4 ring-indigo-500 scale-[0.98]' : ''
+                ]"
+                :style="{ animationDelay: props.isEditing ? `${(index * 0.1)}s` : '0s' }"
             >
                 <component :is="workspace.apps.length > 0 ? (tabConfig[workspace.apps[0]]?.icon || LayoutGrid) : LayoutGrid" class="h-5 w-5 shrink-0" />
                 <span class="hidden lg:inline truncate">{{ workspace.name }}</span>
@@ -201,7 +229,7 @@ onUnmounted(() => {
             </div>
 
             <Button
-                v-if="props.isEditing && props.activeTab !== 'other'"
+                v-if="props.isEditing"
                 variant="ghost"
                 size="icon"
                 @click.stop="emit('toggle-edit')"

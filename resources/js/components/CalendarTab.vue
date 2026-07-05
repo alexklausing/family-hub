@@ -8,6 +8,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import luxonPlugin from '@fullcalendar/luxon3'
+import { useLongPress } from '@/composables/useLongPress'
 
 import {
     Dialog,
@@ -124,7 +125,10 @@ const isFetchingAppleCalendars = ref(false)
 const availableAppleCalendars = ref([])
 const importError = ref('')
 
-// Long Press logic has been replaced with native @contextmenu.prevent for better touchscreen support
+const profileButtonHandlers = useLongPress(
+    () => { isFilterDialogOpen.value = true },
+    () => { isUserDrawerOpen.value = true }
+)
 
 // Schedule Events Logic
 const getEventDate = (event, isEnd = false) => {
@@ -758,8 +762,7 @@ onUnmounted(() => {
                 <Button
                     variant="ghost"
                     class="flex h-14 items-center gap-4 rounded-2xl border border-white/10 bg-white/40 px-6 shadow-none backdrop-blur-2xl transition-all select-none hover:bg-white/60 active:scale-95 dark:bg-white/5"
-                    @click="isUserDrawerOpen = true"
-                    @contextmenu.prevent="isFilterDialogOpen = true"
+                    v-on="profileButtonHandlers"
                 >
                     <div
                         class="bg-primary/10 pointer-events-none flex h-8 w-8 items-center justify-center rounded-lg"

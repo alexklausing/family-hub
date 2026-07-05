@@ -52,6 +52,7 @@ const emit = defineEmits([
     'update:developerSettings',
     'update:isEditingLayouts',
     'open-sync',
+    'reset-layouts',
 ])
 
 const isOpen = computed({
@@ -83,6 +84,13 @@ const devSettings = computed({
 const startEditingLayout = () => {
     emit('update:isEditingLayouts', true)
     isOpen.value = false
+}
+
+const resetLayouts = () => {
+    if (confirm('Are you sure you want to reset all tabs and layouts to default? This cannot be undone.')) {
+        emit('reset-layouts')
+        isOpen.value = false
+    }
 }
 
 const activeTab = ref('general')
@@ -195,26 +203,7 @@ const refreshKiosk = async () => {
                             </select>
                         </div>
                         
-                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
-                            <div class="flex items-center justify-between gap-5">
-                                <div class="flex items-center gap-5">
-                                    <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
-                                        <LayoutGrid class="h-8 w-8" />
-                                    </div>
-                                    <div>
-                                        <h4 class="text-xl font-black tracking-tight">Dashboard Layout</h4>
-                                        <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Rearrange tabs & widgets</p>
-                                    </div>
-                                </div>
-                                
-                                <Button 
-                                    @click="startEditingLayout"
-                                    class="h-14 px-6 rounded-2xl font-black text-white bg-indigo-500 hover:bg-indigo-600 transition-all shadow-none"
-                                >
-                                    Edit Layout
-                                </Button>
-                            </div>
-                        </div>
+                        
                     </div>
 
                     <!-- Appearance Tab -->
@@ -248,6 +237,34 @@ const refreshKiosk = async () => {
                                 >
                                     <Moon class="w-4 h-4" /> Dark
                                 </button>
+                            </div>
+                        </div>
+                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
+                            <div class="mb-6 flex items-center gap-5">
+                                <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                    <LayoutGrid class="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black tracking-tight">Dashboard Layout</h4>
+                                    <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Rearrange tabs & widgets</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <Button
+                                    @click="resetLayouts"
+                                    variant="secondary"
+                                    class="h-14 flex-1 rounded-2xl font-black transition-all shadow-none"
+                                >
+                                    Reset to Default
+                                </Button>
+                                <Button 
+                                    @click="startEditingLayout"
+                                    variant="secondary"
+                                    class="h-14 flex-1 rounded-2xl font-black transition-all shadow-none"
+                                >
+                                    Edit Layout
+                                </Button>
                             </div>
                         </div>
                     </div>

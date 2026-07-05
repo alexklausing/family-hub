@@ -28,6 +28,8 @@ export function useDashboard() {
         return names[id] || id
     }
 
+    const unusedApps = ref([])
+
     const loadFilters = () => {
         const savedWorkspaces = localStorage.getItem('dashboard_workspaces')
         if (savedWorkspaces) {
@@ -68,6 +70,14 @@ export function useDashboard() {
 
         const savedOrder = localStorage.getItem('dashboard_calendar_order')
         if (savedOrder) calendarOrder.value = JSON.parse(savedOrder)
+
+        const savedUnused = localStorage.getItem('dashboard_unused_apps')
+        if (savedUnused) {
+            unusedApps.value = JSON.parse(savedUnused)
+        } else {
+            unusedApps.value = ['fun-facts']
+            saveFilters()
+        }
     }
 
     const saveFilters = () => {
@@ -83,6 +93,10 @@ export function useDashboard() {
         localStorage.setItem(
             'dashboard_workspaces',
             JSON.stringify(workspaces.value)
+        )
+        localStorage.setItem(
+            'dashboard_unused_apps',
+            JSON.stringify(unusedApps.value)
         )
     }
 
@@ -109,6 +123,36 @@ export function useDashboard() {
             Object.assign(ws, updates)
             saveFilters()
         }
+    }
+
+    const reorderWorkspaces = (fromIdx, toIdx) => {
+        const arr = [...workspaces.value]
+        const item = arr.splice(fromIdx, 1)[0]
+        arr.splice(toIdx, 0, item)
+        workspaces.value = arr
+        saveFilters()
+    }
+
+    const resetWorkspaces = () => {
+        workspaces.value = [
+            { id: 'ws_family', name: 'Calendar', layout: 'full', apps: ['family'] },
+            { id: 'ws_weather', name: 'Weather', layout: 'full', apps: ['weather'] },
+            { id: 'ws_recipes', name: 'Recipes', layout: 'full', apps: ['recipes'] },
+            { id: 'ws_shopping', name: 'Shopping', layout: 'full', apps: ['shopping'] },
+            { id: 'ws_chores', name: 'Chores', layout: 'full', apps: ['chores'] },
+        ]
+        unusedApps.value = ['fun-facts']
+        saveFilters()
+    }
+
+    const toggleAppActive = (appId) => {
+        const idx = unusedApps.value.indexOf(appId)
+        if (idx > -1) {
+            unusedApps.value.splice(idx, 1)
+        } else {
+            unusedApps.value.push(appId)
+        }
+        saveFilters()
     }
 
     const visibleCalendarIds = computed(() => {
@@ -306,6 +350,10 @@ export function useDashboard() {
         workspaces,
         createWorkspace,
         removeWorkspace,
-        updateWorkspace
+        updateWorkspace,
+        reorderWorkspaces,
+        resetWorkspaces,
+        unusedApps,
+        toggleAppActive
     }
 }
