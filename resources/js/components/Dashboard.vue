@@ -240,12 +240,72 @@ const handleAppLaunch = (appId) => {
         activeTab.value = 'unpinned'
     }
 }
+
+const handleAddApp = (idx) => {
+    addingToSlotIndex.value = idx
+    activeTab.value = 'other'
+}
+
+const handleCloseEdit = () => {
+    editingWorkspaceId.value = null
+    addingToSlotIndex.value = null
+}
+
+const handleAddSlot = (workspace) => {
+    const current = workspace.layout || 'full'
+    let next = current
+    if (current === 'full') next = 'split-horizontal'
+    else if (current === 'split-horizontal' || current === 'split-vertical') next = 'sidebar-right'
+    else if (current === 'sidebar-right' || current === 'sidebar-left') next = 'grid-2x2'
+    
+    if (next !== current) {
+        const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 }
+        const targetSlots = slotsMap[next]
+        const newApps = [...workspace.apps]
+        while (newApps.length < targetSlots) newApps.push(null)
+        updateWorkspace(workspace.id, { layout: next, apps: newApps })
+    }
+}
+
+const handleRemoveApp = (workspace, idx) => {
+    const w = { ...workspace, apps: [...workspace.apps] }
+    w.apps[idx] = null
+    updateWorkspace(workspace.id, { apps: w.apps })
+}
+
+const handleSwapApps = (workspace, idx) => {
+    const w = { ...workspace, apps: [...workspace.apps] }
+    const nextIdx = (idx + 1) % w.apps.length
+    const temp = w.apps[idx]
+    w.apps[idx] = w.apps[nextIdx]
+    w.apps[nextIdx] = temp
+    updateWorkspace(workspace.id, { apps: w.apps })
+}
+
+const handleRenameWorkspace = (workspace) => {
+    const newName = prompt('Enter a new name for this workspace:', workspace.name)
+    if (newName) updateWorkspace(workspace.id, { name: newName })
+}
+
+const handleCycleLayout = (workspace) => {
+    const current = workspace.layout || 'full'
+    const order = ['full', 'split-vertical', 'split-horizontal', 'sidebar-right', 'sidebar-left', 'grid-2x2']
+    const next = order[(order.indexOf(current) + 1) % order.length]
+    
+    const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 }
+    const targetSlots = slotsMap[next]
+    
+    const newApps = [...workspace.apps]
+    while (newApps.length < targetSlots) newApps.push(null)
+    if (newApps.length > targetSlots) newApps.length = targetSlots
+    
+    updateWorkspace(workspace.id, { layout: next, apps: newApps })
+}
 </script>
 
 <template>
     <div
         class="flex h-screen max-h-screen flex-col overflow-hidden bg-[#f2f2f7] text-black dark:text-white p-4 font-sans transition-colors duration-500 lg:p-6 dark:bg-[#000000]"
-        @click="() => { editingWorkspaceId = null; addingToSlotIndex = null; }"
     >
         <!-- Full Screen Aura Overlay -->
         <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'aura'" class="fixed inset-0 z-[100] bg-black">
@@ -325,60 +385,13 @@ const handleAppLaunch = (appId) => {
                         @toggle-calendar="toggleCalendar"
                         @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
-                        @add-app="(idx) => {
-                            addingToSlotIndex = idx;
-                            activeTab = 'other';
-                        }"
-                        @close-edit="() => {
-                            editingWorkspaceId = null;
-                            addingToSlotIndex = null;
-                        }"
-                        @add-slot="() => {
-                            const current = workspace.layout || 'full';
-                            let next = current;
-                            if (current === 'full') next = 'split-horizontal';
-                            else if (current === 'split-horizontal' || current === 'split-vertical') next = 'sidebar-right';
-                            else if (current === 'sidebar-right' || current === 'sidebar-left') next = 'grid-2x2';
-                            
-                            if (next !== current) {
-                                const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 };
-                                const targetSlots = slotsMap[next];
-                                const newApps = [...workspace.apps];
-                                while (newApps.length < targetSlots) newApps.push(null);
-                                updateWorkspace(workspace.id, { layout: next, apps: newApps });
-                            }
-                        }"
-                        @remove-app="(idx) => {
-                            const w = { ...workspace, apps: [...workspace.apps] };
-                            w.apps[idx] = null;
-                            updateWorkspace(workspace.id, { apps: w.apps });
-                        }"
-                        @swap-apps="(idx) => {
-                            const w = { ...workspace, apps: [...workspace.apps] };
-                            const nextIdx = (idx + 1) % w.apps.length;
-                            const temp = w.apps[idx];
-                            w.apps[idx] = w.apps[nextIdx];
-                            w.apps[nextIdx] = temp;
-                            updateWorkspace(workspace.id, { apps: w.apps });
-                        }"
-                        @rename-workspace="() => {
-                            const newName = prompt('Enter a new name for this workspace:', workspace.name);
-                            if (newName) updateWorkspace(workspace.id, { name: newName });
-                        }"
-                        @cycle-layout="() => {
-                            const current = workspace.layout || 'full';
-                            const order = ['full', 'split-vertical', 'split-horizontal', 'sidebar-right', 'sidebar-left', 'grid-2x2'];
-                            const next = order[(order.indexOf(current) + 1) % order.length];
-                            
-                            const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 };
-                            const targetSlots = slotsMap[next];
-                            
-                            const newApps = [...workspace.apps];
-                            while (newApps.length < targetSlots) newApps.push(null);
-                            if (newApps.length > targetSlots) newApps.length = targetSlots;
-                            
-                            updateWorkspace(workspace.id, { layout: next, apps: newApps });
-                        }"
+                        @add-app="handleAddApp"
+                        @close-edit="handleCloseEdit"
+                        @add-slot="handleAddSlot(workspace)"
+                        @remove-app="(idx) => handleRemoveApp(workspace, idx)"
+                        @swap-apps="(idx) => handleSwapApps(workspace, idx)"
+                        @rename-workspace="handleRenameWorkspace(workspace)"
+                        @cycle-layout="handleCycleLayout(workspace)"
                     />
                 </TabsContent>
 
