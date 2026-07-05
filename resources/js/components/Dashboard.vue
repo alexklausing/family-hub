@@ -326,8 +326,27 @@ const handleAppLaunch = (appId) => {
                         @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
                         @add-app="(idx) => {
-                            addingToSlotIndex.value = idx;
+                            addingToSlotIndex = idx;
                             activeTab = 'other';
+                        }"
+                        @close-edit="() => {
+                            editingWorkspaceId = null;
+                            addingToSlotIndex = null;
+                        }"
+                        @add-slot="() => {
+                            const current = workspace.layout || 'full';
+                            let next = current;
+                            if (current === 'full') next = 'split-horizontal';
+                            else if (current === 'split-horizontal' || current === 'split-vertical') next = 'sidebar-right';
+                            else if (current === 'sidebar-right' || current === 'sidebar-left') next = 'grid-2x2';
+                            
+                            if (next !== current) {
+                                const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 };
+                                const targetSlots = slotsMap[next];
+                                const newApps = [...workspace.apps];
+                                while (newApps.length < targetSlots) newApps.push(null);
+                                updateWorkspace(workspace.id, { layout: next, apps: newApps });
+                            }
                         }"
                         @remove-app="(idx) => {
                             const w = { ...workspace, apps: [...workspace.apps] };

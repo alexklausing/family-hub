@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Plus, X, Pencil, ArrowLeftRight, ArrowUpDown, LayoutTemplate } from 'lucide-vue-next'
+import { Plus, X, Pencil, ArrowLeftRight, ArrowUpDown, LayoutTemplate, Check } from 'lucide-vue-next'
 import AppRenderer from './AppRenderer.vue'
 
 const props = defineProps({
@@ -33,7 +33,9 @@ const emit = defineEmits([
     'remove-app',
     'swap-apps',
     'rename-workspace',
-    'cycle-layout'
+    'cycle-layout',
+    'add-slot',
+    'close-edit'
 ])
 
 // A workspace object looks like:
@@ -129,20 +131,39 @@ const getSlotClass = (index, total) => {
         </div>
 
         <!-- Global Edit Actions for this Workspace -->
-        <div v-if="isEditing" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black px-6 py-3 rounded-full shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div v-if="isEditing" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-black px-4 py-3 rounded-full shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
             <button 
-                @click="emit('cycle-layout')"
-                class="p-2 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
+                @click.stop="emit('close-edit')"
+                class="flex items-center gap-2 px-4 py-2 bg-green-500 rounded-full hover:bg-green-600 text-white transition-colors"
+                title="Done Editing"
+            >
+                <Check class="w-5 h-5" />
+                <span class="font-bold">Done</span>
+            </button>
+            <div class="w-px h-6 bg-white/20 dark:bg-black/20 mx-1"></div>
+            <button 
+                v-if="workspace.apps.length < 4"
+                @click.stop="emit('add-slot')"
+                class="flex items-center gap-2 px-4 py-2 bg-indigo-500 rounded-full hover:bg-indigo-600 text-white transition-colors whitespace-nowrap"
+                title="Add New App Slot"
+            >
+                <Plus class="w-5 h-5" />
+                <span class="font-bold">Add Slot</span>
+            </button>
+            <div v-if="workspace.apps.length < 4" class="w-px h-6 bg-white/20 dark:bg-black/20 mx-1"></div>
+            <button 
+                @click.stop="emit('cycle-layout')"
+                class="p-3 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
                 title="Change Layout Template"
             >
                 <LayoutTemplate class="w-5 h-5" />
             </button>
             <div class="w-px h-6 bg-white/20 dark:bg-black/20 mx-1"></div>
-            <span class="font-black text-lg tracking-wide px-2">{{ workspace.name }}</span>
+            <span class="font-black text-lg tracking-wide px-2 whitespace-nowrap">{{ workspace.name }}</span>
             <div class="w-px h-6 bg-white/20 dark:bg-black/20 mx-1"></div>
             <button 
-                @click="emit('rename-workspace')"
-                class="p-2 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
+                @click.stop="emit('rename-workspace')"
+                class="p-3 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
                 title="Rename Workspace"
             >
                 <Pencil class="w-5 h-5" />
