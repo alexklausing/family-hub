@@ -218,7 +218,14 @@ const handleSyncRequest = (option) => {
     >
         <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-6">
             <!-- Header Island Component -->
-            <DashboardHeader :active-tab="activeTab" :local-timezone="localTimezone" :workspaces="workspaces" @open-settings="isSettingsDialogOpen = true" />
+            <DashboardHeader 
+                :active-tab="activeTab" 
+                :local-timezone="localTimezone" 
+                :workspaces="workspaces" 
+                :is-editing="editingWorkspaceId === activeTab"
+                @open-settings="isSettingsDialogOpen = true" 
+                @toggle-edit="editingWorkspaceId = editingWorkspaceId ? null : activeTab"
+            />
 
             <!-- Global Weather Alerts Banner -->
             <div v-if="isBannerVisible" class="shrink-0 -mt-2">
@@ -262,7 +269,6 @@ const handleSyncRequest = (option) => {
                     :key="workspace.id"
                     :value="workspace.id"
                     class="m-0 h-full p-0 focus-visible:ring-0"
-                    @contextmenu.prevent="editingWorkspaceId = workspace.id"
                 >
                     <WorkspaceView
                         :workspace="workspace"
@@ -296,6 +302,18 @@ const handleSyncRequest = (option) => {
                         @rename-workspace="() => {
                             const newName = prompt('Enter a new name for this workspace:', workspace.name);
                             if (newName) updateWorkspace(workspace.id, { name: newName });
+                        }"
+                        @cycle-layout="() => {
+                            const current = workspace.layout || 'default';
+                            let next = 'default';
+                            if (workspace.apps.length === 2) {
+                                next = (current === 'split-horizontal') ? 'split-vertical' : 'split-horizontal';
+                            } else if (workspace.apps.length === 3) {
+                                const order = ['sidebar-right', 'sidebar-left', 'rows'];
+                                const idx = Math.max(0, order.indexOf(current));
+                                next = order[(idx + 1) % order.length];
+                            }
+                            updateWorkspace(workspace.id, { layout: next });
                         }"
                     />
                 </TabsContent>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Plus, X, Pencil, ArrowLeftRight } from 'lucide-vue-next'
+import { Plus, X, Pencil, ArrowLeftRight, LayoutTemplate } from 'lucide-vue-next'
 import AppRenderer from './AppRenderer.vue'
 
 const props = defineProps({
@@ -32,24 +32,37 @@ const emit = defineEmits([
     'add-app',
     'remove-app',
     'swap-apps',
-    'rename-workspace'
+    'rename-workspace',
+    'cycle-layout'
 ])
 
 // A workspace object looks like:
-// { id: 'ws1', name: 'Weather', layout: 'full', apps: ['weather'] }
-// Layout can be 'full', 'split', 'sidebar'
+// { id: 'ws1', name: 'Weather', layout: 'split-vertical', apps: ['weather', 'recipes'] }
 
 const layoutClass = computed(() => {
     const appsCount = props.workspace.apps.length
+    const l = props.workspace.layout || 'default'
     if (appsCount === 0) return 'flex items-center justify-center'
     if (appsCount === 1) return 'grid grid-cols-1 grid-rows-1'
-    if (appsCount === 2) return 'grid grid-cols-2 grid-rows-1 gap-6'
-    if (appsCount === 3) return 'grid grid-cols-2 grid-rows-2 gap-6'
+    if (appsCount === 2) {
+        if (l === 'split-horizontal') return 'grid grid-cols-1 grid-rows-2 gap-6'
+        return 'grid grid-cols-2 grid-rows-1 gap-6' // split-vertical
+    }
+    if (appsCount === 3) {
+        if (l === 'sidebar-right') return 'grid grid-cols-2 grid-rows-2 gap-6'
+        if (l === 'sidebar-left') return 'grid grid-cols-2 grid-rows-2 gap-6'
+        if (l === 'rows') return 'grid grid-cols-1 grid-rows-3 gap-6'
+        return 'grid grid-cols-2 grid-rows-2 gap-6'
+    }
     return 'grid grid-cols-2 grid-rows-2 gap-6' // Fallback for 4
 })
 
 const getSlotClass = (index, total) => {
-    if (total === 3 && index === 0) return 'row-span-2'
+    const l = props.workspace.layout || 'sidebar-right'
+    if (total === 3) {
+        if (l === 'sidebar-right' && index === 0) return 'row-span-2'
+        if (l === 'sidebar-left' && index === 2) return 'row-span-2 col-start-2 row-start-1'
+    }
     return ''
 }
 </script>
@@ -128,8 +141,18 @@ const getSlotClass = (index, total) => {
             <button 
                 @click="emit('rename-workspace')"
                 class="p-2 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
+                title="Rename Workspace"
             >
                 <Pencil class="w-5 h-5" />
+            </button>
+            <div v-if="workspace.apps.length > 1" class="w-px h-6 bg-white/20 dark:bg-black/20 mx-1"></div>
+            <button 
+                v-if="workspace.apps.length > 1"
+                @click="emit('cycle-layout')"
+                class="p-2 bg-white/20 dark:bg-black/10 rounded-full hover:bg-white/30 dark:hover:bg-black/20 transition-colors"
+                title="Change Layout Template"
+            >
+                <LayoutTemplate class="w-5 h-5" />
             </button>
         </div>
     </div>

@@ -18,6 +18,8 @@ import {
     Radar,
     LayoutGrid,
     ImageIcon,
+    Pencil,
+    Check,
 } from 'lucide-vue-next'
 import { useWeather } from '@/composables/useWeather'
 
@@ -33,10 +35,14 @@ const props = defineProps({
     workspaces: {
         type: Array,
         default: () => [],
+    },
+    isEditing: {
+        type: Boolean,
+        default: false,
     }
 })
 
-const emit = defineEmits(['open-settings'])
+const emit = defineEmits(['open-settings', 'toggle-edit'])
 
 const weatherView = inject('weatherView')
 
@@ -193,6 +199,20 @@ onUnmounted(() => {
                     >--&deg;</span
                 >
             </div>
+
+            <Button
+                v-if="props.activeTab !== 'other'"
+                variant="ghost"
+                size="icon"
+                @click="emit('toggle-edit')"
+                :class="[
+                    'h-16 w-16 rounded-3xl shadow-none backdrop-blur-2xl transition-all',
+                    props.isEditing ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/40 hover:bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white'
+                ]"
+            >
+                <Check v-if="props.isEditing" class="h-7 w-7" />
+                <Pencil v-else class="h-6 w-6" />
+            </Button>
 
             <Button
                 variant="ghost"
