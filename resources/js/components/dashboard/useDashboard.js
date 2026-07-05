@@ -13,6 +13,7 @@ export function useDashboard() {
     const availableCalendars = ref([])
     const defaultCalendarId = ref(null)
     const filtersByProfile = ref({})
+    const calendarOrder = ref([])
 
     // Timezone
     const localTimezone = ref(
