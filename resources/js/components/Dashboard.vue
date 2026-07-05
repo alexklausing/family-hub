@@ -17,8 +17,6 @@ import { useWeather } from '@/composables/useWeather'
 
 const { alerts, fetchWeather, weatherData } = useWeather()
 
-const { alerts, fetchWeather, weatherData } = useWeather()
-
 const {
     isSettingsDialogOpen,
     isSyncModalOpen,

@@ -17,6 +17,8 @@ export function useDashboard() {
     // Timezone
     const localTimezone = ref(
         Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    )
+    
     // Workspaces
     const workspaces = ref([])
 
