@@ -204,7 +204,7 @@ onUnmounted(() => {
                 v-if="props.activeTab !== 'other'"
                 variant="ghost"
                 size="icon"
-                @click="emit('toggle-edit')"
+                @click.stop="emit('toggle-edit')"
                 :class="[
                     'h-16 w-16 rounded-3xl shadow-none backdrop-blur-2xl transition-all',
                     props.isEditing ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/40 hover:bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white'

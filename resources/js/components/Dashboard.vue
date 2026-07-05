@@ -211,6 +211,37 @@ const handleSyncRequest = (option) => {
     syncOption.value = option
     handleSync()
 }
+
+const handleAppLaunch = (appId) => {
+    // First see if we are editing a workspace to add to it
+    if (editingWorkspaceId.value) {
+        const ws = workspaces.value.find(w => w.id === editingWorkspaceId.value)
+        if (ws) {
+            const w = { ...ws, apps: [...ws.apps] }
+            if (w.apps.length < 4) {
+                w.apps.push(appId)
+                updateWorkspace(ws.id, { apps: w.apps })
+                if (w.apps.length > 1 && ws.name === ws.apps[0]) {
+                    const newName = prompt('You added another app. What would you like to name this tab?', ws.name + ' & ' + appId)
+                    if (newName) updateWorkspace(ws.id, { name: newName })
+                }
+                activeTab.value = ws.id
+                editingWorkspaceId.value = null
+                return
+            }
+        }
+    }
+    
+    // Otherwise just switch to the first workspace containing this app
+    const existingWs = workspaces.value.find(w => w.apps.includes(appId))
+    if (existingWs) {
+        activeTab.value = existingWs.id
+    } else {
+        // Do not automatically pin. Just display it temporarily.
+        unpinnedAppId.value = appId
+        activeTab.value = 'unpinned'
+    }
+}
 </script>
 
 <template>
@@ -364,36 +395,7 @@ const handleSyncRequest = (option) => {
                             activeTab = newWs.id;
                         }"
                         @remove-workspace="removeWorkspace"
-                        @launch="(appId) => {
-                            // First see if we are editing a workspace to add to it
-                            if (editingWorkspaceId) {
-                                const ws = workspaces.find(w => w.id === editingWorkspaceId);
-                                if (ws) {
-                                    const w = { ...ws, apps: [...ws.apps] };
-                                    if (w.apps.length < 4) {
-                                        w.apps.push(appId);
-                                        updateWorkspace(ws.id, { apps: w.apps });
-                                        if (w.apps.length > 1 && ws.name === ws.apps[0]) {
-                                            const newName = prompt('You added another app. What would you like to name this tab?', ws.name + ' & ' + appId);
-                                            if (newName) updateWorkspace(ws.id, { name: newName });
-                                        }
-                                        activeTab = ws.id;
-                                        editingWorkspaceId = null;
-                                        return;
-                                    }
-                                }
-                            }
-                            
-                            // Otherwise just switch to the first workspace containing this app
-                            const existingWs = workspaces.find(w => w.apps.includes(appId));
-                            if (existingWs) {
-                                activeTab = existingWs.id;
-                            } else {
-                                // Do not automatically pin. Just display it temporarily.
-                                unpinnedAppId.value = appId;
-                                activeTab = 'unpinned';
-                            }
-                        }"
+                        @launch="handleAppLaunch"
                     />
                 </TabsContent>
             </div>
