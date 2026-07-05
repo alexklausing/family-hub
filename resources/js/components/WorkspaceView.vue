@@ -96,9 +96,10 @@ const onDrop = (e, dropIndex) => {
                     :class="[
                         'relative min-h-0 min-w-0 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden transition-all duration-200', 
                         getSlotClass(index, workspace.apps.length),
-                        isEditing ? 'cursor-grab active:cursor-grabbing' : '',
+                        isEditing ? 'cursor-grab active:cursor-grabbing animate-jiggle origin-center shadow-lg' : '',
                         dragOverIndex === index ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-slate-100 dark:ring-offset-slate-900 scale-[0.98]' : ''
                     ]"
+                    :style="{ animationDelay: isEditing ? `${(index * 0.1)}s` : '0s' }"
                 >
                     <AppRenderer
                         v-if="appId"
