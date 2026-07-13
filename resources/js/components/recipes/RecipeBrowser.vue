@@ -409,58 +409,32 @@ watch(continuousScroll, (newVal) => {
             v-if="!selectedRecipe"
             class="flex h-full min-h-0 flex-col gap-8 p-2"
         >
-            <!-- Top Navigation Tabs (Library | Menu) -->
-            <div class="flex items-center gap-4 border-b border-white/10 pb-4 mb-2 shrink-0">
-                <Button :variant="viewMode === 'recipes' ? 'default' : 'ghost'" @click="viewMode = 'recipes'" class="rounded-2xl text-lg font-black px-8 h-12 shadow-sm transition-all" :class="viewMode === 'recipes' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 dark:bg-white/5'">Library</Button>
-                <Button :variant="viewMode === 'menu' ? 'default' : 'ghost'" @click="viewMode = 'menu'" class="rounded-2xl text-lg font-black px-8 h-12 shadow-sm transition-all" :class="viewMode === 'menu' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 dark:bg-white/5'">Weekly Menu</Button>
-            </div>
-
-            <!-- Toolbar (Library Mode) -->
-            <div
-                v-if="viewMode === 'recipes'"
-                class="flex shrink-0 flex-col items-center justify-between gap-6 md:flex-row"
-            >
-                <div class="relative w-full max-w-lg">
-                    <Search
-                        class="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2 opacity-50"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Search your library..."
-                        class="focus:ring-primary/20 h-14 rounded-2xl border-white/20 bg-white/40 pl-12 text-xl shadow-lg backdrop-blur-xl transition-all dark:border-white/10 dark:bg-white/5"
-                    />
+            <!-- Main Toolbar -->
+            <div class="flex shrink-0 flex-col items-center justify-between gap-6 xl:flex-row pb-2">
+                <!-- Navigation Tabs -->
+                <div class="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar shrink-0">
+                    <Button :variant="viewMode === 'recipes' ? 'default' : 'ghost'" @click="viewMode = 'recipes'" class="rounded-2xl text-lg font-black px-8 h-14 shadow-lg transition-all border border-transparent" :class="viewMode === 'recipes' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 border-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5'">Library</Button>
+                    <Button :variant="viewMode === 'menu' ? 'default' : 'ghost'" @click="viewMode = 'menu'" class="rounded-2xl text-lg font-black px-8 h-14 shadow-lg transition-all border border-transparent" :class="viewMode === 'menu' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 border-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5'">Weekly Menu</Button>
                 </div>
 
-                <div
-                    class="no-scrollbar flex w-full items-center gap-3 overflow-x-auto pb-2 md:w-auto"
-                >
-                    <Button
-                        v-for="cat in categories"
-                        :key="cat"
-                        :variant="activeCategory === cat ? 'default' : 'ghost'"
-                        class="h-12 rounded-2xl border border-transparent px-6 text-sm font-black tracking-widest whitespace-nowrap uppercase shadow-sm transition-all"
-                        :class="
-                            activeCategory === cat
-                                ? 'bg-primary shadow-primary/20 text-white'
-                                : 'border-white/20 bg-white/40 backdrop-blur-xl hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10'
-                        "
-                        @click="selectCategory(cat)"
-                    >
-                        {{ cat }}
-                    </Button>
-                </div>
+                <!-- Tools (Library Mode) -->
+                <div v-if="viewMode === 'recipes'" class="flex w-full flex-col items-center gap-4 md:flex-row xl:w-auto xl:justify-end min-w-0">
+                    <!-- Search -->
+                    <div class="relative w-full md:max-w-xs lg:max-w-md shrink-0">
+                        <Search class="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2 opacity-50" />
+                        <Input v-model="searchQuery" placeholder="Search library..." class="focus:ring-primary/20 h-14 rounded-2xl border-white/20 bg-white/40 pl-12 text-xl shadow-lg backdrop-blur-xl transition-all dark:border-white/10 dark:bg-white/5" />
+                    </div>
 
-                <div class="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-14 w-14 shrink-0 rounded-2xl border-none bg-white/40 shadow-xl backdrop-blur-xl hover:bg-white/60 dark:bg-white/5 dark:hover:bg-white/10"
-                        @click="fetchRecipes(1, true)"
-                        :disabled="isSyncing"
-                    >
-                        <RefreshCw
-                            :class="['h-7 w-7', isSyncing ? 'animate-spin' : '']"
-                        />
+                    <!-- Categories -->
+                    <div class="no-scrollbar flex w-full items-center gap-3 overflow-x-auto md:w-auto">
+                        <Button v-for="cat in categories" :key="cat" :variant="activeCategory === cat ? 'default' : 'ghost'" class="h-14 rounded-2xl border border-transparent px-6 text-sm font-black tracking-widest whitespace-nowrap uppercase shadow-sm transition-all shrink-0" :class="activeCategory === cat ? 'bg-primary shadow-primary/20 text-white' : 'border-white/20 bg-white/40 backdrop-blur-xl hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10'" @click="selectCategory(cat)">
+                            {{ cat }}
+                        </Button>
+                    </div>
+
+                    <!-- Sync -->
+                    <Button variant="ghost" size="icon" class="h-14 w-14 shrink-0 rounded-2xl border border-white/20 bg-white/40 shadow-xl backdrop-blur-xl hover:bg-white/60 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10" @click="fetchRecipes(1, true)" :disabled="isSyncing">
+                        <RefreshCw :class="['h-7 w-7', isSyncing ? 'animate-spin' : '']" />
                     </Button>
                 </div>
             </div>
