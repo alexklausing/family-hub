@@ -145,6 +145,44 @@ const scaledIngredients = computed(() => {
         .join('\n')
 })
 
+const formatMenuDate = (dateString) => {
+    if (!dateString) return ''
+    const datePart = dateString.split('T')[0]
+    const [year, month, day] = datePart.split('-')
+    const date = new Date(year, month - 1, day)
+    
+    // Check if it's today or tomorrow for friendly display
+    const today = new Date()
+    const tomorrow = new Date()
+    tomorrow.setDate(today.getDate() + 1)
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Today'
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow'
+    }
+    
+    return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+const groupedMenuPlans = computed(() => {
+    const groups = {}
+    menuPlans.value.forEach(plan => {
+        const datePart = plan.date.split('T')[0]
+        if (!groups[datePart]) {
+            groups[datePart] = []
+        }
+        groups[datePart].push(plan)
+    })
+    
+    // Sort dates
+    return Object.keys(groups).sort().map(date => ({
+        date,
+        formattedDate: formatMenuDate(date),
+        plans: groups[date]
+    }))
+})
+
 const fetchMenu = async () => {
     isLoadingMenu.value = true
     try {
@@ -402,26 +440,32 @@ watch(continuousScroll, (newVal) => {
                         <p class="font-bold">Plan some meals from your library to see them here.</p>
                     </div>
                 </div>
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-                    <Card v-for="plan in menuPlans" :key="plan.id" class="group flex flex-col overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-2xl backdrop-blur-3xl dark:bg-white/5">
-                        <div v-if="plan.recipe" @click="openDetails(plan.recipe)" class="cursor-pointer">
-                            <div class="bg-muted relative aspect-[4/3] overflow-hidden">
-                                <img v-if="plan.recipe.image_url" :src="plan.recipe.image_url" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                                <div class="absolute bottom-6 left-6 right-6">
-                                    <div class="bg-primary text-primary-foreground mb-3 inline-flex items-center rounded-xl px-3 py-1 text-xs font-black tracking-widest uppercase shadow-lg">
+                <div v-else class="flex flex-col gap-8 pb-12">
+                    <div v-for="group in groupedMenuPlans" :key="group.date" class="flex flex-col gap-4">
+                        <div class="sticky top-0 z-10 bg-black/5 dark:bg-white/5 backdrop-blur-3xl p-4 rounded-3xl shadow-sm border border-white/10 flex items-center gap-4">
+                            <div class="bg-primary/20 text-primary h-12 w-12 rounded-2xl flex items-center justify-center shrink-0">
+                                <CalendarDays class="h-6 w-6" />
+                            </div>
+                            <h2 class="text-3xl font-black tracking-tight">{{ group.formattedDate }}</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-2">
+                            <Card v-for="plan in group.plans" :key="plan.id" class="group flex flex-row overflow-hidden rounded-[2rem] border-none bg-white/60 shadow-xl backdrop-blur-3xl dark:bg-white/5 hover:scale-[1.02] transition-all cursor-pointer h-32" @click="plan.recipe && openDetails(plan.recipe)">
+                                <div class="w-1/3 relative bg-muted shrink-0">
+                                    <img v-if="plan.recipe?.image_url" :src="plan.recipe.image_url" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                    <div v-else class="h-full w-full flex items-center justify-center">
+                                        <Utensils class="text-muted-foreground/30 h-10 w-10" />
+                                    </div>
+                                </div>
+                                <div class="p-4 flex flex-col justify-center flex-1 min-w-0">
+                                    <div class="text-primary text-xs font-black tracking-widest uppercase mb-1">
                                         {{ ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'][plan.type] || 'Meal' }}
                                     </div>
-                                    <h3 class="line-clamp-2 text-2xl font-black tracking-tighter text-white">{{ plan.recipe.title }}</h3>
+                                    <h3 class="font-bold text-lg leading-tight truncate whitespace-normal line-clamp-2">{{ plan.recipe?.title || 'Unknown Recipe' }}</h3>
                                 </div>
-                            </div>
+                            </Card>
                         </div>
-                        <div class="p-6 bg-white/40 dark:bg-black/20">
-                            <p class="font-black tracking-widest uppercase text-sm opacity-60 flex items-center gap-2">
-                                <CalendarDays class="w-4 h-4" /> {{ new Date(plan.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) }}
-                            </p>
-                        </div>
-                    </Card>
+                    </div>
                 </div>
             </div>
 
