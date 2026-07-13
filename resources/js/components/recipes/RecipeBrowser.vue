@@ -58,6 +58,7 @@ const planToList = ref(false)
 const isPlanning = ref(false)
 
 // View States
+const showClearMenuConfirm = ref(false)
 const viewMode = ref('recipes') // 'recipes' or 'menu'
 const menuPlans = ref([])
 const isLoadingMenu = ref(false)
@@ -225,8 +226,7 @@ const removeMeal = async (uuid) => {
 }
 
 const clearMenu = async () => {
-    if (!confirm('Are you sure you want to clear the entire menu? This will also remove associated items from the shopping list.')) return
-    
+    showClearMenuConfirm.value = false
     try {
         await axios.delete('/api/recipes/menu')
         await fetchMenu()
@@ -340,10 +340,7 @@ const submitPlan = async () => {
         
         if (viewMode.value === 'menu') fetchMenu()
         
-        // Briefly show success before closing, or just close
-        setTimeout(() => {
-            closePlanDialog()
-        }, 500)
+        closePlanDialog()
     } catch (e) {
         console.error(e)
     } finally {
@@ -449,7 +446,7 @@ watch(continuousScroll, (newVal) => {
                 </div>
                 <div v-else class="flex flex-col gap-8 pb-12">
                     <div class="flex justify-end px-2 pt-2">
-                        <Button v-if="menuPlans && menuPlans.length > 0" variant="destructive" class="h-12 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-destructive/20 transition-all hover:scale-[1.02]" @click="clearMenu">
+                        <Button v-if="menuPlans && menuPlans.length > 0" variant="destructive" class="h-12 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-destructive/20 transition-all hover:scale-[1.02]" @click="showClearMenuConfirm = true">
                             <X class="w-5 h-5 mr-2" /> Clear Menu
                         </Button>
                     </div>
@@ -999,6 +996,26 @@ watch(continuousScroll, (newVal) => {
                     <Button class="rounded-xl font-bold shadow-lg" @click="submitPlan" :disabled="isPlanning">
                         {{ isPlanning ? 'Saving...' : 'Save Plan' }}
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <!-- Clear Menu Confirm Dialog -->
+        <Dialog :open="showClearMenuConfirm" @update:open="showClearMenuConfirm = $event">
+            <DialogContent class="sm:max-w-[425px] rounded-[2rem] p-6 border-white/20 bg-white/90 backdrop-blur-3xl dark:bg-[#050505]/90">
+                <DialogHeader>
+                    <DialogTitle class="text-2xl font-black tracking-tighter text-destructive flex items-center gap-3">
+                        <X class="w-8 h-8 p-1 bg-destructive/10 rounded-full" /> Clear Entire Menu?
+                    </DialogTitle>
+                </DialogHeader>
+                <div class="py-4">
+                    <p class="font-bold opacity-70 leading-relaxed">
+                        Are you sure you want to clear the entire menu? This will also remove associated items from your shopping list.
+                    </p>
+                </div>
+                <DialogFooter class="gap-3 sm:justify-between">
+                    <Button variant="ghost" class="rounded-xl font-bold flex-1" @click="showClearMenuConfirm = false">Cancel</Button>
+                    <Button variant="destructive" class="rounded-xl font-bold shadow-lg shadow-destructive/20 flex-1" @click="clearMenu">Yes, Clear Menu</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
