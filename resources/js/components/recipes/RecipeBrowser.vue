@@ -449,8 +449,8 @@ watch(continuousScroll, (newVal) => {
                 </div>
                 <div v-else class="flex flex-col gap-8 pb-12">
                     <div class="flex justify-end px-2 pt-2">
-                        <Button v-if="menuPlans && menuPlans.length > 0" variant="ghost" class="rounded-xl font-bold bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" @click="clearMenu">
-                            <X class="w-4 h-4 mr-2" /> Clear Menu
+                        <Button v-if="menuPlans && menuPlans.length > 0" variant="destructive" class="h-12 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-destructive/20 transition-all hover:scale-[1.02]" @click="clearMenu">
+                            <X class="w-5 h-5 mr-2" /> Clear Menu
                         </Button>
                     </div>
 
@@ -482,7 +482,7 @@ watch(continuousScroll, (newVal) => {
                                         <h3 class="font-bold text-lg leading-tight truncate whitespace-normal line-clamp-2">{{ plan.recipe?.title || 'Unknown Recipe' }}</h3>
                                     </div>
                                 </Card>
-                                <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20" @click.stop="removeMeal(plan.uuid)">
+                                <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20" @click.stop="removeMeal(plan.uuid || plan.id)">
                                     <X class="w-4 h-4" />
                                 </Button>
                             </div>

@@ -230,16 +230,19 @@ class PaprikaSyncService
         return $success;
     }
 
-    public function removeMealFromMenu(string $mealPlanUuid): bool
+    public function removeMealFromMenu($mealPlanId): bool
     {
         if (! $this->token && ! $this->login()) {
             return false;
         }
 
-        $mealPlan = \App\Models\MealPlan::where('uuid', $mealPlanUuid)->first();
+        $mealPlan = \App\Models\MealPlan::where('uuid', $mealPlanId)->orWhere('id', $mealPlanId)->first();
         if (!$mealPlan) return false;
 
-        $success = $this->postSyncData('meals', [['uid' => $mealPlanUuid, 'deleted' => 1]]);
+        $success = true;
+        if (!empty($mealPlan->uuid)) {
+            $success = $this->postSyncData('meals', [['uid' => $mealPlan->uuid, 'deleted' => 1]]);
+        }
         
         if ($success) {
             $recipeUuid = $mealPlan->recipe_uuid;
@@ -271,13 +274,21 @@ class PaprikaSyncService
             return false;
         }
 
-        $meals = \App\Models\MealPlan::whereNotNull('uuid')->get();
+        // Sync first to ensure we have the latest Paprika UUIDs for older local records
+        $this->syncMealPlans();
+
+        $meals = \App\Models\MealPlan::all();
         if ($meals->isEmpty()) return true;
 
         $recipeUuids = $meals->pluck('recipe_uuid')->unique()->toArray();
-        $mealItems = $meals->map(fn($meal) => ['uid' => $meal->uuid, 'deleted' => 1])->toArray();
+        $mealItems = $meals->filter(fn($meal) => !empty($meal->uuid))
+                           ->map(fn($meal) => ['uid' => $meal->uuid, 'deleted' => 1])
+                           ->toArray();
         
-        $success = $this->postSyncData('meals', $mealItems);
+        $success = true;
+        if (!empty($mealItems)) {
+            $success = $this->postSyncData('meals', $mealItems);
+        }
         
         if ($success) {
             \App\Models\MealPlan::truncate();
