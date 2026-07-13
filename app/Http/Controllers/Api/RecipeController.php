@@ -97,4 +97,18 @@ class RecipeController extends Controller
             'results' => $results,
         ]);
     }
+
+    public function menu(Request $request)
+    {
+        $startDate = $request->query('start', now()->format('Y-m-d'));
+        $endDate = $request->query('end', now()->addDays(7)->format('Y-m-d'));
+
+        $mealPlans = \App\Models\MealPlan::with('recipe')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->orderBy('type')
+            ->get();
+
+        return response()->json($mealPlans);
+    }
 }

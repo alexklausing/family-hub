@@ -32,8 +32,9 @@ Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 
 
 Route::get('/api/recipes', [RecipeController::class, 'index']);
 Route::get('/api/recipes/categories', [RecipeController::class, 'categories']);
-Route::get('/api/recipes/{recipe}', [RecipeController::class, 'show']);
-Route::post('/api/recipes/{recipe}/plan', [RecipeController::class, 'plan']);
+Route::get('/api/recipes/menu', [RecipeController::class, 'menu']);
+Route::get('/api/recipes/{recipe:uuid}', [RecipeController::class, 'show']);
+Route::post('/api/recipes/{recipe:uuid}/plan', [RecipeController::class, 'plan']);
 
 Route::get('/api/shopping-list', [ShoppingListController::class, 'index']);
 Route::post('/api/shopping-list', [ShoppingListController::class, 'store']);

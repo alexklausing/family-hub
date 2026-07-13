@@ -41,6 +41,10 @@ const props = defineProps({
         type: Boolean,
         required: true,
     },
+    continuousRecipeScroll: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const emit = defineEmits([
@@ -51,6 +55,7 @@ const emit = defineEmits([
     'update:defaultRadarLayers',
     'update:developerSettings',
     'update:isEditingLayouts',
+    'update:continuousRecipeScroll',
     'open-sync',
     'reset-layouts',
 ])
@@ -79,6 +84,11 @@ const defaultLayers = computed({
 const devSettings = computed({
     get: () => props.developerSettings,
     set: (val) => emit('update:developerSettings', val),
+})
+
+const continuousScroll = computed({
+    get: () => props.continuousRecipeScroll,
+    set: (val) => emit('update:continuousRecipeScroll', val),
 })
 
 const startEditingLayout = () => {
@@ -202,8 +212,21 @@ const refreshKiosk = async () => {
                                 <option value="UTC">UTC</option>
                             </select>
                         </div>
-                        
-                        
+
+                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
+                            <div class="mb-6 flex items-center justify-between gap-5">
+                                <div class="flex items-center gap-5">
+                                    <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                        <LayoutGrid class="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-black tracking-tight">Recipes Continuous View</h4>
+                                        <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Load more automatically when scrolling</p>
+                                    </div>
+                                </div>
+                                <Switch :checked="continuousScroll" @update:checked="val => continuousScroll = val" />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Appearance Tab -->

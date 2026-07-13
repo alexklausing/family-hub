@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, inject } from 'vue'
 import axios from 'axios'
 import {
     Card,
@@ -47,7 +47,7 @@ const isLoading = ref(false)
 const isSyncing = ref(false)
 const error = ref(null)
 const pagination = ref({ current_page: 1, last_page: 1 })
-const continuousScroll = ref(false)
+const continuousScroll = inject('continuousRecipeScroll', ref(false))
 
 // Plan Meal State
 const planDialogRecipe = ref(null)
@@ -58,6 +58,10 @@ const planToList = ref(false)
 const isPlanning = ref(false)
 
 // View States
+const viewMode = ref('recipes') // 'recipes' or 'menu'
+const menuPlans = ref([])
+const isLoadingMenu = ref(false)
+
 const selectedRecipe = ref(null)
 const isCookingMode = ref(false)
 const isAddingToList = ref({}) // Map: { uuid: true/false }
@@ -139,6 +143,24 @@ const scaledIngredients = computed(() => {
             })
         })
         .join('\n')
+})
+
+const fetchMenu = async () => {
+    isLoadingMenu.value = true
+    try {
+        const res = await axios.get('/api/recipes/menu')
+        menuPlans.value = res.data
+    } catch (e) {
+        console.error('Failed to fetch menu', e)
+    } finally {
+        isLoadingMenu.value = false
+    }
+}
+
+watch(viewMode, (newVal) => {
+    if (newVal === 'menu') {
+        fetchMenu()
+    }
 })
 
 const fetchRecipes = async (page = 1, sync = false, append = false) => {
@@ -237,6 +259,9 @@ const submitPlan = async () => {
             add_to_shopping_list: planToList.value,
             scale: scaleFactor.value,
         })
+        
+        if (viewMode.value === 'menu') fetchMenu()
+        
         // Briefly show success before closing, or just close
         setTimeout(() => {
             closePlanDialog()
@@ -306,8 +331,15 @@ watch(continuousScroll, (newVal) => {
             v-if="!selectedRecipe"
             class="flex h-full min-h-0 flex-col gap-8 p-2"
         >
-            <!-- Toolbar -->
+            <!-- Top Navigation Tabs (Library | Menu) -->
+            <div class="flex items-center gap-4 border-b border-white/10 pb-4 mb-2 shrink-0">
+                <Button :variant="viewMode === 'recipes' ? 'default' : 'ghost'" @click="viewMode = 'recipes'" class="rounded-2xl text-lg font-black px-8 h-12 shadow-sm transition-all" :class="viewMode === 'recipes' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 dark:bg-white/5'">Library</Button>
+                <Button :variant="viewMode === 'menu' ? 'default' : 'ghost'" @click="viewMode = 'menu'" class="rounded-2xl text-lg font-black px-8 h-12 shadow-sm transition-all" :class="viewMode === 'menu' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 dark:bg-white/5'">Weekly Menu</Button>
+            </div>
+
+            <!-- Toolbar (Library Mode) -->
             <div
+                v-if="viewMode === 'recipes'"
                 class="flex shrink-0 flex-col items-center justify-between gap-6 md:flex-row"
             >
                 <div class="relative w-full max-w-lg">
@@ -341,11 +373,6 @@ watch(continuousScroll, (newVal) => {
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center gap-2 mr-2 bg-white/40 p-2 px-4 h-14 rounded-2xl backdrop-blur-xl dark:bg-white/5 border border-white/20">
-                        <Label for="continuous-scroll" class="text-xs font-bold tracking-widest uppercase cursor-pointer">Continuous View</Label>
-                        <Switch id="continuous-scroll" :checked="continuousScroll" @update:checked="continuousScroll = $event" />
-                    </div>
-
                     <Button
                         variant="ghost"
                         size="icon"
@@ -360,9 +387,48 @@ watch(continuousScroll, (newVal) => {
                 </div>
             </div>
 
-            <!-- Grid -->
-            <div
-                v-if="isLoading"
+            <!-- Menu View -->
+            <div v-if="viewMode === 'menu'" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                <div v-if="isLoadingMenu" class="flex flex-1 items-center justify-center h-full">
+                    <div class="flex flex-col items-center gap-6">
+                        <RefreshCw class="text-primary h-16 w-16 animate-spin" />
+                        <p class="animate-pulse text-2xl font-black tracking-tighter uppercase opacity-40">Loading Menu...</p>
+                    </div>
+                </div>
+                <div v-else-if="!menuPlans || menuPlans.length === 0" class="flex flex-1 items-center justify-center h-full">
+                    <div class="space-y-6 text-center opacity-40">
+                        <CalendarDays class="mx-auto h-32 w-32" />
+                        <p class="text-3xl font-black tracking-tighter uppercase">No meals planned</p>
+                        <p class="font-bold">Plan some meals from your library to see them here.</p>
+                    </div>
+                </div>
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
+                    <Card v-for="plan in menuPlans" :key="plan.id" class="group flex flex-col overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-2xl backdrop-blur-3xl dark:bg-white/5">
+                        <div v-if="plan.recipe" @click="openDetails(plan.recipe)" class="cursor-pointer">
+                            <div class="bg-muted relative aspect-[4/3] overflow-hidden">
+                                <img v-if="plan.recipe.image_url" :src="plan.recipe.image_url" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                <div class="absolute bottom-6 left-6 right-6">
+                                    <div class="bg-primary text-primary-foreground mb-3 inline-flex items-center rounded-xl px-3 py-1 text-xs font-black tracking-widest uppercase shadow-lg">
+                                        {{ ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'][plan.type] || 'Meal' }}
+                                    </div>
+                                    <h3 class="line-clamp-2 text-2xl font-black tracking-tighter text-white">{{ plan.recipe.title }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-white/40 dark:bg-black/20">
+                            <p class="font-black tracking-widest uppercase text-sm opacity-60 flex items-center gap-2">
+                                <CalendarDays class="w-4 h-4" /> {{ new Date(plan.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) }}
+                            </p>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+
+            <!-- Grid (Library Mode) -->
+            <template v-if="viewMode === 'recipes'">
+                <div
+                    v-if="isLoading"
                 class="flex flex-1 items-center justify-center"
             >
                 <div class="flex flex-col items-center gap-6">
@@ -515,6 +581,7 @@ watch(continuousScroll, (newVal) => {
                     </Button>
                 </div>
             </div>
+            </template>
         </div>
 
         <!-- 2. Full Recipe Detail View -->

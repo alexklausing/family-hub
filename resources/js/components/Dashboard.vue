@@ -108,6 +108,12 @@ const developerSettings = ref({
 })
 provide('developerSettings', developerSettings)
 
+const continuousRecipeScroll = ref(localStorage.getItem('continuousRecipeScroll') === 'true')
+watch(continuousRecipeScroll, (newVal) => {
+    localStorage.setItem('continuousRecipeScroll', newVal.toString())
+})
+provide('continuousRecipeScroll', continuousRecipeScroll)
+
 const applyCursorSetting = () => {
     if (developerSettings.value.hideCursor) {
         document.body.classList.add('cursor-none')
@@ -476,6 +482,7 @@ const handleCycleLayout = (workspace) => {
             v-model:defaultRadarLayers="defaultRadarLayers"
             v-model:developerSettings="developerSettings"
             v-model:is-editing-layouts="isEditingLayouts"
+            v-model:continuousRecipeScroll="continuousRecipeScroll"
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
