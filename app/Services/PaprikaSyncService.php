@@ -209,16 +209,88 @@ class PaprikaSyncService
             return false;
         }
 
+        $uid = strtoupper(uuid_create());
         $items = [
             [
-                'uid' => strtoupper(uuid_create()),
+                'uid' => $uid,
                 'recipe_uid' => $recipeUuid,
                 'date' => $date,
                 'type' => $type,
             ]
         ];
 
-        return $this->postSyncData('meals', $items);
+        $success = $this->postSyncData('meals', $items);
+        if ($success) {
+            \App\Models\MealPlan::updateOrCreate(
+                ['recipe_uuid' => $recipeUuid, 'date' => $date],
+                ['type' => $type, 'uuid' => $uid]
+            );
+        }
+
+        return $success;
+    }
+
+    public function removeMealFromMenu(string $mealPlanUuid): bool
+    {
+        if (! $this->token && ! $this->login()) {
+            return false;
+        }
+
+        $mealPlan = \App\Models\MealPlan::where('uuid', $mealPlanUuid)->first();
+        if (!$mealPlan) return false;
+
+        $success = $this->postSyncData('meals', [['uid' => $mealPlanUuid, 'deleted' => 1]]);
+        
+        if ($success) {
+            $recipeUuid = $mealPlan->recipe_uuid;
+            $mealPlan->delete();
+            
+            // Delete one instance of each grocery item associated with this recipe
+            $items = \App\Models\ShoppingListItem::where('recipe_uuid', $recipeUuid)->get();
+            $itemsToDelete = [];
+            $deletedNames = [];
+            
+            foreach ($items as $item) {
+                if (!in_array($item->name, $deletedNames)) {
+                    $itemsToDelete[] = ['uid' => $item->uuid, 'deleted' => 1];
+                    $deletedNames[] = $item->name;
+                }
+            }
+            
+            if (count($itemsToDelete) > 0) {
+                $this->postSyncData('groceries', $itemsToDelete);
+                \App\Models\ShoppingListItem::whereIn('uuid', collect($itemsToDelete)->pluck('uid'))->delete();
+            }
+        }
+        return $success;
+    }
+
+    public function clearMenu(): bool
+    {
+        if (! $this->token && ! $this->login()) {
+            return false;
+        }
+
+        $meals = \App\Models\MealPlan::whereNotNull('uuid')->get();
+        if ($meals->isEmpty()) return true;
+
+        $recipeUuids = $meals->pluck('recipe_uuid')->unique()->toArray();
+        $mealItems = $meals->map(fn($meal) => ['uid' => $meal->uuid, 'deleted' => 1])->toArray();
+        
+        $success = $this->postSyncData('meals', $mealItems);
+        
+        if ($success) {
+            \App\Models\MealPlan::truncate();
+            
+            // Delete all shopping list items that are tied to ANY recipe from the menu
+            $groceries = \App\Models\ShoppingListItem::whereIn('recipe_uuid', $recipeUuids)->get();
+            if ($groceries->isNotEmpty()) {
+                $groceryItems = $groceries->map(fn($g) => ['uid' => $g->uuid, 'deleted' => 1])->toArray();
+                $this->postSyncData('groceries', $groceryItems);
+                \App\Models\ShoppingListItem::whereIn('recipe_uuid', $recipeUuids)->delete();
+            }
+        }
+        return $success;
     }
 
     /**
@@ -458,7 +530,7 @@ class PaprikaSyncService
                 foreach ($meals as $mealData) {
                     MealPlan::updateOrCreate(
                         ['recipe_uuid' => $mealData['recipe_uid'], 'date' => $mealData['date']],
-                        ['type' => $mealData['type']]
+                        ['type' => $mealData['type'], 'uuid' => $mealData['uid']]
                     );
                 }
             }

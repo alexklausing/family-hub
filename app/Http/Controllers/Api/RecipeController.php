@@ -111,4 +111,16 @@ class RecipeController extends Controller
 
         return response()->json($mealPlans);
     }
+
+    public function removeMenu(Request $request, $uuid)
+    {
+        $success = $this->paprikaService->removeMealFromMenu($uuid);
+        return response()->json(['success' => $success]);
+    }
+
+    public function clearMenu(Request $request)
+    {
+        $success = $this->paprikaService->clearMenu();
+        return response()->json(['success' => $success]);
+    }
 }

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['date', 'recipe_uuid', 'type'])]
+#[Fillable(['date', 'recipe_uuid', 'type', 'uuid'])]
 class MealPlan extends Model
 {
     use HasFactory;

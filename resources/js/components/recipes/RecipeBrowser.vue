@@ -166,21 +166,40 @@ const formatMenuDate = (dateString) => {
 }
 
 const groupedMenuPlans = computed(() => {
-    const groups = {}
+    const days = []
+    const today = new Date()
+    
+    // Create exactly 7 days starting from today
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(today)
+        d.setDate(today.getDate() + i)
+        const dateString = d.toISOString().split('T')[0]
+        
+        days.push({
+            date: dateString,
+            formattedDate: formatMenuDate(dateString),
+            plans: []
+        })
+    }
+    
+    // Fill in the plans
     menuPlans.value.forEach(plan => {
         const datePart = plan.date.split('T')[0]
-        if (!groups[datePart]) {
-            groups[datePart] = []
+        const day = days.find(d => d.date === datePart)
+        if (day) {
+            day.plans.push(plan)
+        } else {
+            // Append days outside the 7-day window if they exist
+            days.push({
+                date: datePart,
+                formattedDate: formatMenuDate(datePart),
+                plans: [plan]
+            })
         }
-        groups[datePart].push(plan)
     })
     
-    // Sort dates
-    return Object.keys(groups).sort().map(date => ({
-        date,
-        formattedDate: formatMenuDate(date),
-        plans: groups[date]
-    }))
+    // Sort all days
+    return days.sort((a, b) => a.date.localeCompare(b.date))
 })
 
 const fetchMenu = async () => {
@@ -192,6 +211,27 @@ const fetchMenu = async () => {
         console.error('Failed to fetch menu', e)
     } finally {
         isLoadingMenu.value = false
+    }
+}
+
+const removeMeal = async (uuid) => {
+    if (!uuid) return
+    try {
+        await axios.delete(`/api/recipes/menu/${uuid}`)
+        await fetchMenu()
+    } catch (e) {
+        console.error('Failed to remove meal', e)
+    }
+}
+
+const clearMenu = async () => {
+    if (!confirm('Are you sure you want to clear the entire menu? This will also remove associated items from the shopping list.')) return
+    
+    try {
+        await axios.delete('/api/recipes/menu')
+        await fetchMenu()
+    } catch (e) {
+        console.error('Failed to clear menu', e)
     }
 }
 
@@ -433,14 +473,13 @@ watch(continuousScroll, (newVal) => {
                         <p class="animate-pulse text-2xl font-black tracking-tighter uppercase opacity-40">Loading Menu...</p>
                     </div>
                 </div>
-                <div v-else-if="!menuPlans || menuPlans.length === 0" class="flex flex-1 items-center justify-center h-full">
-                    <div class="space-y-6 text-center opacity-40">
-                        <CalendarDays class="mx-auto h-32 w-32" />
-                        <p class="text-3xl font-black tracking-tighter uppercase">No meals planned</p>
-                        <p class="font-bold">Plan some meals from your library to see them here.</p>
-                    </div>
-                </div>
                 <div v-else class="flex flex-col gap-8 pb-12">
+                    <div class="flex justify-end px-2 pt-2">
+                        <Button v-if="menuPlans && menuPlans.length > 0" variant="ghost" class="rounded-xl font-bold bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" @click="clearMenu">
+                            <X class="w-4 h-4 mr-2" /> Clear Menu
+                        </Button>
+                    </div>
+
                     <div v-for="group in groupedMenuPlans" :key="group.date" class="flex flex-col gap-4">
                         <div class="sticky top-0 z-10 bg-black/5 dark:bg-white/5 backdrop-blur-3xl p-4 rounded-3xl shadow-sm border border-white/10 flex items-center gap-4">
                             <div class="bg-primary/20 text-primary h-12 w-12 rounded-2xl flex items-center justify-center shrink-0">
@@ -449,21 +488,30 @@ watch(continuousScroll, (newVal) => {
                             <h2 class="text-3xl font-black tracking-tight">{{ group.formattedDate }}</h2>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-2">
-                            <Card v-for="plan in group.plans" :key="plan.id" class="group flex flex-row overflow-hidden rounded-[2rem] border-none bg-white/60 shadow-xl backdrop-blur-3xl dark:bg-white/5 hover:scale-[1.02] transition-all cursor-pointer h-32" @click="plan.recipe && openDetails(plan.recipe)">
-                                <div class="w-1/3 relative bg-muted shrink-0">
-                                    <img v-if="plan.recipe?.image_url" :src="plan.recipe.image_url" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                    <div v-else class="h-full w-full flex items-center justify-center">
-                                        <Utensils class="text-muted-foreground/30 h-10 w-10" />
+                        <div v-if="group.plans.length === 0" class="flex flex-col items-center justify-center py-10 bg-white/30 dark:bg-white/5 rounded-[2rem] border-2 border-dashed border-primary/20">
+                             <p class="font-bold opacity-40 uppercase tracking-widest text-sm">No meals planned</p>
+                        </div>
+                        
+                        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-2">
+                            <div v-for="plan in group.plans" :key="plan.id" class="relative group h-32">
+                                <Card class="flex flex-row overflow-hidden rounded-[2rem] border-none bg-white/60 shadow-xl backdrop-blur-3xl dark:bg-white/5 hover:scale-[1.02] transition-all cursor-pointer h-full" @click="plan.recipe && openDetails(plan.recipe)">
+                                    <div class="w-1/3 relative bg-muted shrink-0">
+                                        <img v-if="plan.recipe?.image_url" :src="plan.recipe.image_url" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                        <div v-else class="h-full w-full flex items-center justify-center">
+                                            <Utensils class="text-muted-foreground/30 h-10 w-10" />
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="p-4 flex flex-col justify-center flex-1 min-w-0">
-                                    <div class="text-primary text-xs font-black tracking-widest uppercase mb-1">
-                                        {{ ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'][plan.type] || 'Meal' }}
+                                    <div class="p-4 flex flex-col justify-center flex-1 min-w-0">
+                                        <div class="text-primary text-xs font-black tracking-widest uppercase mb-1">
+                                            {{ ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'][plan.type] || 'Meal' }}
+                                        </div>
+                                        <h3 class="font-bold text-lg leading-tight truncate whitespace-normal line-clamp-2">{{ plan.recipe?.title || 'Unknown Recipe' }}</h3>
                                     </div>
-                                    <h3 class="font-bold text-lg leading-tight truncate whitespace-normal line-clamp-2">{{ plan.recipe?.title || 'Unknown Recipe' }}</h3>
-                                </div>
-                            </Card>
+                                </Card>
+                                <Button variant="destructive" size="icon" class="absolute -top-2 -right-2 w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20" @click.stop="removeMeal(plan.uuid)">
+                                    <X class="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -962,14 +1010,14 @@ watch(continuousScroll, (newVal) => {
                         </select>
                     </div>
 
-                    <div class="flex items-center space-x-3 bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
-                        <Checkbox id="plan-menu" :checked="planToMenu" @update:checked="planToMenu = $event" />
+                    <div class="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
                         <Label for="plan-menu" class="text-sm font-bold cursor-pointer">Add to Menu</Label>
+                        <Switch id="plan-menu" :checked="planToMenu" @update:checked="planToMenu = $event" />
                     </div>
 
-                    <div class="flex items-center space-x-3 bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
-                        <Checkbox id="plan-shopping" :checked="planToList" @update:checked="planToList = $event" />
+                    <div class="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
                         <Label for="plan-shopping" class="text-sm font-bold cursor-pointer">Add to Shopping List</Label>
+                        <Switch id="plan-shopping" :checked="planToList" @update:checked="planToList = $event" />
                     </div>
                 </div>
                 <DialogFooter>

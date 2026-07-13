@@ -33,6 +33,8 @@ Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 
 Route::get('/api/recipes', [RecipeController::class, 'index']);
 Route::get('/api/recipes/categories', [RecipeController::class, 'categories']);
 Route::get('/api/recipes/menu', [RecipeController::class, 'menu']);
+Route::delete('/api/recipes/menu', [RecipeController::class, 'clearMenu']);
+Route::delete('/api/recipes/menu/{uuid}', [RecipeController::class, 'removeMenu']);
 Route::get('/api/recipes/{recipe:uuid}', [RecipeController::class, 'show']);
 Route::post('/api/recipes/{recipe:uuid}/plan', [RecipeController::class, 'plan']);
 
