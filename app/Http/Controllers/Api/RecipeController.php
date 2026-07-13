@@ -57,4 +57,44 @@ class RecipeController extends Controller
 
         return response()->json($categories);
     }
+
+    public function plan(Request $request, Recipe $recipe)
+    {
+        $validated = $request->validate([
+            'date' => 'required_if:add_to_menu,true|date_format:Y-m-d',
+            'type' => 'required_if:add_to_menu,true|integer|between:0,5',
+            'add_to_menu' => 'boolean',
+            'add_to_shopping_list' => 'boolean',
+            'scale' => 'numeric|min:0.1',
+        ]);
+
+        $addToMenu = $validated['add_to_menu'] ?? false;
+        $addToShoppingList = $validated['add_to_shopping_list'] ?? false;
+        $scale = $validated['scale'] ?? 1.0;
+
+        $results = [
+            'menu' => false,
+            'shopping_list' => false,
+        ];
+
+        if ($addToMenu) {
+            $results['menu'] = $this->paprikaService->addMealToMenu(
+                $recipe->uuid,
+                $validated['date'],
+                $validated['type']
+            );
+        }
+
+        if ($addToShoppingList) {
+            $results['shopping_list'] = $this->paprikaService->addRecipeToShoppingList(
+                $recipe->uuid,
+                $scale
+            );
+        }
+
+        return response()->json([
+            'message' => 'Recipe planned successfully',
+            'results' => $results,
+        ]);
+    }
 }

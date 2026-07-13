@@ -203,6 +203,24 @@ class PaprikaSyncService
         return $this->postSyncData('groceries', $items);
     }
 
+    public function addMealToMenu(string $recipeUuid, string $date, int $type = 2): bool
+    {
+        if (! $this->token && ! $this->login()) {
+            return false;
+        }
+
+        $items = [
+            [
+                'uid' => strtoupper(uuid_create()),
+                'recipe_uid' => $recipeUuid,
+                'date' => $date,
+                'type' => $type,
+            ]
+        ];
+
+        return $this->postSyncData('meals', $items);
+    }
+
     /**
      * Scale a single ingredient line
      */
@@ -336,7 +354,11 @@ class PaprikaSyncService
                 ->post("{$this->baseUrl}/sync/{$endpoint}/");
 
             if ($response->successful()) {
-                $this->syncShoppingList();
+                if ($endpoint === 'groceries') {
+                    $this->syncShoppingList();
+                } elseif ($endpoint === 'meals') {
+                    $this->syncMealPlans();
+                }
 
                 return true;
             }

@@ -10,6 +10,16 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog'
 import {
     Search,
     RefreshCw,
@@ -37,6 +47,15 @@ const isLoading = ref(false)
 const isSyncing = ref(false)
 const error = ref(null)
 const pagination = ref({ current_page: 1, last_page: 1 })
+const continuousScroll = ref(false)
+
+// Plan Meal State
+const planDialogRecipe = ref(null)
+const planDate = ref(new Date().toISOString().split('T')[0])
+const planType = ref(2)
+const planToMenu = ref(true)
+const planToList = ref(false)
+const isPlanning = ref(false)
 
 // View States
 const selectedRecipe = ref(null)
@@ -122,8 +141,10 @@ const scaledIngredients = computed(() => {
         .join('\n')
 })
 
-const fetchRecipes = async (page = 1, sync = false) => {
-    isLoading.value = sync ? false : true
+const fetchRecipes = async (page = 1, sync = false, append = false) => {
+    if (!append) {
+        isLoading.value = sync ? false : true
+    }
     if (sync) isSyncing.value = true
     error.value = null
 
@@ -138,20 +159,37 @@ const fetchRecipes = async (page = 1, sync = false) => {
         })
 
         if (response.data && response.data.data) {
-            recipes.value = response.data.data
+            if (append) {
+                recipes.value = [...recipes.value, ...response.data.data]
+            } else {
+                recipes.value = response.data.data
+            }
             pagination.value = {
                 current_page: response.data.current_page,
                 last_page: response.data.last_page,
             }
-        } else {
+        } else if (!append) {
             recipes.value = []
         }
     } catch (err) {
         console.error('Failed to fetch recipes:', err)
-        error.value = 'Failed to load recipes. Please try syncing again.'
+        if (!append) {
+            error.value = 'Failed to load recipes. Please try syncing again.'
+        }
     } finally {
         isLoading.value = false
         isSyncing.value = false
+    }
+}
+
+const handleScroll = (e) => {
+    if (!continuousScroll.value) return;
+    const { scrollTop, scrollHeight, clientHeight } = e.target;
+    // Load more when within 200px of bottom
+    if (scrollHeight - scrollTop <= clientHeight + 200) {
+        if (!isLoading.value && pagination.value.current_page < pagination.value.last_page) {
+            fetchRecipes(pagination.value.current_page + 1, false, true);
+        }
     }
 }
 
@@ -177,6 +215,36 @@ const addToList = async (recipe) => {
     } catch (error) {
         console.error('Failed to add recipe to list:', error)
         isAddingToList.value[recipe.uuid] = false
+    }
+}
+
+const openPlanDialog = (recipe) => {
+    planDialogRecipe.value = recipe
+}
+
+const closePlanDialog = () => {
+    planDialogRecipe.value = null
+}
+
+const submitPlan = async () => {
+    if (!planDialogRecipe.value) return
+    isPlanning.value = true
+    try {
+        await axios.post(`/api/recipes/${planDialogRecipe.value.uuid}/plan`, {
+            date: planDate.value,
+            type: planType.value,
+            add_to_menu: planToMenu.value,
+            add_to_shopping_list: planToList.value,
+            scale: scaleFactor.value,
+        })
+        // Briefly show success before closing, or just close
+        setTimeout(() => {
+            closePlanDialog()
+        }, 500)
+    } catch (e) {
+        console.error(e)
+    } finally {
+        isPlanning.value = false
     }
 }
 
@@ -219,6 +287,15 @@ watch(searchQuery, () => {
     searchTimeout = setTimeout(() => {
         handleSearch()
     }, 500)
+})
+
+watch(continuousScroll, (newVal) => {
+    if (newVal) {
+        // We are on page N, if we switched to continuous we should maybe reset to page 1 or just keep appending from here. Let's keep appending.
+        if (pagination.value.current_page < pagination.value.last_page) {
+            // Trigger a fetch if they toggle on and are at bottom? Just let the scroll handler do it.
+        }
+    }
 })
 </script>
 
@@ -263,17 +340,24 @@ watch(searchQuery, () => {
                     </Button>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-14 w-14 shrink-0 rounded-2xl border-none bg-white/40 shadow-xl backdrop-blur-xl hover:bg-white/60 dark:bg-white/5 dark:hover:bg-white/10"
-                    @click="fetchRecipes(1, true)"
-                    :disabled="isSyncing"
-                >
-                    <RefreshCw
-                        :class="['h-7 w-7', isSyncing ? 'animate-spin' : '']"
-                    />
-                </Button>
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 mr-2 bg-white/40 p-2 px-4 h-14 rounded-2xl backdrop-blur-xl dark:bg-white/5 border border-white/20">
+                        <Label for="continuous-scroll" class="text-xs font-bold tracking-widest uppercase cursor-pointer">Continuous View</Label>
+                        <Switch id="continuous-scroll" :checked="continuousScroll" @update:checked="continuousScroll = $event" />
+                    </div>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="h-14 w-14 shrink-0 rounded-2xl border-none bg-white/40 shadow-xl backdrop-blur-xl hover:bg-white/60 dark:bg-white/5 dark:hover:bg-white/10"
+                        @click="fetchRecipes(1, true)"
+                        :disabled="isSyncing"
+                    >
+                        <RefreshCw
+                            :class="['h-7 w-7', isSyncing ? 'animate-spin' : '']"
+                        />
+                    </Button>
+                </div>
             </div>
 
             <!-- Grid -->
@@ -343,6 +427,7 @@ watch(searchQuery, () => {
             <div
                 v-else
                 class="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-2"
+                @scroll="handleScroll"
             >
                 <div
                     class="grid grid-cols-1 gap-8 pb-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
@@ -389,22 +474,10 @@ watch(searchQuery, () => {
                             <Button
                                 variant="secondary"
                                 class="bg-primary/5 hover:bg-primary border-primary/10 h-12 w-full rounded-2xl border-2 font-black tracking-widest uppercase transition-all hover:text-white"
-                                @click.stop="addToList(recipe)"
-                                :disabled="isAddingToList[recipe.uuid]"
+                                @click.stop="openPlanDialog(recipe)"
                             >
-                                <component
-                                    :is="
-                                        isAddingToList[recipe.uuid]
-                                            ? Check
-                                            : ShoppingCart
-                                    "
-                                    class="mr-2 h-5 w-5"
-                                />
-                                {{
-                                    isAddingToList[recipe.uuid]
-                                        ? 'Added!'
-                                        : 'Add to List'
-                                }}
+                                <Utensils class="mr-2 h-5 w-5" />
+                                Plan Meal
                             </Button>
                         </CardContent>
                     </Card>
@@ -412,7 +485,7 @@ watch(searchQuery, () => {
 
                 <!-- Pagination -->
                 <div
-                    v-if="pagination.last_page > 1"
+                    v-if="pagination.last_page > 1 && !continuousScroll"
                     class="flex items-center justify-center gap-6 py-12"
                 >
                     <Button
@@ -590,22 +663,10 @@ watch(searchQuery, () => {
                     >
                     <Button
                         class="shadow-primary/20 h-14 flex-1 rounded-2xl px-8 text-lg font-black shadow-lg transition-all hover:scale-[1.02]"
-                        @click="addToList(selectedRecipe)"
-                        :disabled="isAddingToList[selectedRecipe.uuid]"
+                        @click="openPlanDialog(selectedRecipe)"
                     >
-                        <component
-                            :is="
-                                isAddingToList[selectedRecipe.uuid]
-                                    ? Check
-                                    : ShoppingCart
-                            "
-                            class="mr-3 h-6 w-6"
-                        />
-                        {{
-                            isAddingToList[selectedRecipe.uuid]
-                                ? 'Added!'
-                                : 'Add to Shopping List'
-                        }}
+                        <Utensils class="mr-3 h-5 w-5" />
+                        Plan Meal
                     </Button>
                     <Button
                         variant="outline"
@@ -765,6 +826,49 @@ watch(searchQuery, () => {
                 </div>
             </div>
         </Teleport>
+        
+        <!-- Plan Meal Dialog -->
+        <Dialog :open="!!planDialogRecipe" @update:open="closePlanDialog">
+            <DialogContent class="sm:max-w-[425px] rounded-[2rem] p-6 border-white/20 bg-white/90 backdrop-blur-3xl dark:bg-[#050505]/90">
+                <DialogHeader>
+                    <DialogTitle class="text-2xl font-black tracking-tighter">Plan Meal</DialogTitle>
+                </DialogHeader>
+                <div v-if="planDialogRecipe" class="grid gap-6 py-4">
+                    <p class="font-bold text-lg text-primary">{{ planDialogRecipe.title }}</p>
+                    
+                    <div class="flex flex-col gap-3">
+                        <Label class="text-xs font-black tracking-widest uppercase opacity-70">Date</Label>
+                        <Input type="date" v-model="planDate" class="h-12 rounded-xl text-lg font-bold" />
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <Label class="text-xs font-black tracking-widest uppercase opacity-70">Meal Type</Label>
+                        <select v-model="planType" class="h-12 rounded-xl border border-input bg-transparent px-3 text-lg font-bold shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                            <option :value="0">Breakfast</option>
+                            <option :value="1">Lunch</option>
+                            <option :value="2">Dinner</option>
+                            <option :value="3">Snack</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-3 bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
+                        <Checkbox id="plan-menu" :checked="planToMenu" @update:checked="planToMenu = $event" />
+                        <Label for="plan-menu" class="text-sm font-bold cursor-pointer">Add to Menu</Label>
+                    </div>
+
+                    <div class="flex items-center space-x-3 bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
+                        <Checkbox id="plan-shopping" :checked="planToList" @update:checked="planToList = $event" />
+                        <Label for="plan-shopping" class="text-sm font-bold cursor-pointer">Add to Shopping List</Label>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" class="rounded-xl font-bold" @click="closePlanDialog">Cancel</Button>
+                    <Button class="rounded-xl font-bold shadow-lg" @click="submitPlan" :disabled="isPlanning">
+                        {{ isPlanning ? 'Saving...' : 'Save Plan' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>
 

@@ -18,6 +18,8 @@ services:
             XDG_CONFIG_HOME: /tmp
             APP_KEY: '${APP_KEY}'
             APP_ENV: '${APP_ENV:-local}'
+        ports:
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
 
     web:
         image: 'nginx:alpine'

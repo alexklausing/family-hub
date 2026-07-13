@@ -33,6 +33,7 @@ Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 
 Route::get('/api/recipes', [RecipeController::class, 'index']);
 Route::get('/api/recipes/categories', [RecipeController::class, 'categories']);
 Route::get('/api/recipes/{recipe}', [RecipeController::class, 'show']);
+Route::post('/api/recipes/{recipe}/plan', [RecipeController::class, 'plan']);
 
 Route::get('/api/shopping-list', [ShoppingListController::class, 'index']);
 Route::post('/api/shopping-list', [ShoppingListController::class, 'store']);
@@ -70,3 +71,11 @@ Route::post('/api/kiosk/refresh', function () {
     }
     return response()->json(['message' => 'Refresh signal sent']);
 });
+
+// Auto-patch Vite public/hot for Kiosk and Remote Mac access
+if (file_exists(public_path('hot'))) {
+    $hotContent = file_get_contents(public_path('hot'));
+    if (strpos($hotContent, '127.0.0.1') !== false) {
+        file_put_contents(public_path('hot'), str_replace('127.0.0.1', '192.168.4.140', $hotContent));
+    }
+}

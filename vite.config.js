@@ -28,12 +28,13 @@ export default defineConfig({
         },
     },
     server: {
-        host: '127.0.0.1',
+        host: '0.0.0.0',
         port: 5173,
         strictPort: true,
         cors: true,
         https: false,
-        hmr: { host: '127.0.0.1' },
+        origin: 'http://192.168.4.140:5173',
+        hmr: { host: '192.168.4.140' },
         fs: {
             allow: ['..'],
         },
