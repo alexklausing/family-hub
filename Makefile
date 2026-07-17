@@ -40,7 +40,7 @@ migrate:
 # Run Vite (direct via local npm)
 vite:
 	@echo "🧹 Cleaning up port 5173..."
-	-@lsof -i tcp:5173 -sTCP:LISTEN -t | xargs kill -9 || true
+	-@lsof -i tcp:5173 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true
 	@echo "🚀 Starting Vite locally..."
 	npm run dev
 
