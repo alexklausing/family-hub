@@ -133,12 +133,6 @@
 
 
 /* Virtual Keyboard Push-Up */
-html.keyboard-open [data-slot="dialog-content"] {
-    top: 2rem !important;
-    transform: translate(-50%, 0) !important;
-    max-height: calc(100vh - 440px) !important;
-}
-
 html.keyboard-open body {
     padding-bottom: 400px !important;
 }
