@@ -50,7 +50,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             v-bind="{ ...$attrs, ...forwarded }"
             @interact-outside="(e) => {
                 const target = e.detail?.originalEvent?.target || e.target;
-                if (target?.closest?.('.virtual-keyboard-wrapper')) {
+                if (target?.closest?.('.virtual-keyboard-wrapper') || target?.closest?.('.hg-button')) {
                     e.preventDefault()
                 }
             }"
