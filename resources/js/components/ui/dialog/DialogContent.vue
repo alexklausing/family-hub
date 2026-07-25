@@ -49,7 +49,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             data-slot="dialog-content"
             v-bind="{ ...$attrs, ...forwarded }"
             @interact-outside="(e) => {
-                if (e.target.closest('.virtual-keyboard-wrapper')) {
+                const target = e.detail?.originalEvent?.target || e.target;
+                if (target?.closest?.('.virtual-keyboard-wrapper')) {
                     e.preventDefault()
                 }
             }"
