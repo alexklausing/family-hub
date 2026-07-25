@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, BadgeCheck, CheckCircle2, Minus, Plus } from 'lucide-vue-next'
+import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, BadgeCheck, CheckCircle2, Minus, Plus, Clock, Globe } from 'lucide-vue-next'
 
 const props = defineProps({
     workspaces: {
@@ -58,13 +58,31 @@ const allApps = [
         id: 'aura',
         name: 'Aura Frames',
         icon: ImageIcon,
-        color: 'bg-teal-500',
+        color: 'bg-rose-500',
+    },
+    {
+        id: 'word-of-the-day',
+        name: 'Word of the Day',
+        icon: Globe,
+        color: 'bg-emerald-500',
     },
     {
         id: 'fun-facts',
         name: 'Fun Facts',
         icon: BadgeCheck,
         color: 'bg-yellow-500',
+    },
+    {
+        id: 'countdowns',
+        name: 'Countdowns',
+        icon: Calendar,
+        color: 'bg-rose-500',
+    },
+    {
+        id: 'up-next',
+        name: 'Up Next',
+        icon: Clock,
+        color: 'bg-indigo-400',
     }
 ]
 

@@ -47,8 +47,9 @@ const {
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
 const isEditingLayouts = ref(false)
-const unpinnedAppId = ref(null)
 const addingToSlotIndex = ref(null)
+const addingToWorkspaceId = ref(null)
+const unpinnedAppId = ref(null)
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
@@ -225,8 +226,8 @@ const handleSyncRequest = (option) => {
 
 const handleAppLaunch = (appId) => {
     // First see if we are editing a workspace to add to it
-    if (isEditingLayouts.value && addingToSlotIndex.value !== null) {
-        const ws = workspaces.value.find(w => w.id === activeTab.value)
+    if (isEditingLayouts.value && addingToSlotIndex.value !== null && addingToWorkspaceId.value !== null) {
+        const ws = workspaces.value.find(w => w.id === addingToWorkspaceId.value)
         if (ws) {
             const w = { ...ws, apps: [...ws.apps] }
             w.apps[addingToSlotIndex.value] = appId
@@ -235,6 +236,7 @@ const handleAppLaunch = (appId) => {
             
             activeTab.value = ws.id
             addingToSlotIndex.value = null
+            addingToWorkspaceId.value = null
             return
         }
     }
@@ -250,7 +252,8 @@ const handleAppLaunch = (appId) => {
     }
 }
 
-const handleAddApp = (idx) => {
+const handleAddApp = (workspaceId, idx) => {
+    addingToWorkspaceId.value = workspaceId
     addingToSlotIndex.value = idx
     activeTab.value = 'other'
 }
@@ -258,12 +261,14 @@ const handleAddApp = (idx) => {
 const handleCloseEdit = () => {
     isEditingLayouts.value = false
     addingToSlotIndex.value = null
+    addingToWorkspaceId.value = null
 }
 
 const handleToggleEdit = () => {
     isEditingLayouts.value = !isEditingLayouts.value
     if (!isEditingLayouts.value) {
         addingToSlotIndex.value = null
+        addingToWorkspaceId.value = null
     }
 }
 
@@ -271,11 +276,11 @@ const handleAddSlot = (workspace) => {
     const current = workspace.layout || 'full'
     let next = current
     if (current === 'full') next = 'split-horizontal'
-    else if (current === 'split-horizontal' || current === 'split-vertical') next = 'sidebar-right'
-    else if (current === 'sidebar-right' || current === 'sidebar-left') next = 'grid-2x2'
+    else if (current === 'split-horizontal' || current === 'split-vertical') next = 'main-sidebar-right'
+    else if (current === 'sidebar-right' || current === 'sidebar-left' || current === 'main-sidebar-right') next = 'grid-2x2'
     
     if (next !== current) {
-        const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'grid-2x2': 4 }
+        const slotsMap = { 'full': 1, 'split-vertical': 2, 'split-horizontal': 2, 'sidebar-right': 3, 'sidebar-left': 3, 'main-sidebar-right': 3, 'grid-2x2': 4 }
         const targetSlots = slotsMap[next]
         const newApps = [...workspace.apps]
         while (newApps.length < targetSlots) newApps.push(null)
@@ -297,7 +302,7 @@ const handleRemoveSlot = (workspace, idx) => {
     
     let nextLayout = 'full'
     if (newApps.length === 2) nextLayout = 'split-horizontal'
-    else if (newApps.length === 3) nextLayout = 'sidebar-right'
+    else if (newApps.length === 3) nextLayout = 'main-sidebar-right'
     else if (newApps.length === 4) nextLayout = 'grid-2x2'
     
     updateWorkspace(workspace.id, { layout: nextLayout, apps: newApps })
@@ -323,7 +328,7 @@ const handleCycleLayout = (workspace) => {
     if (currentCount === 2) {
         next = next === 'split-vertical' ? 'split-horizontal' : 'split-vertical'
     } else if (currentCount === 3) {
-        next = next === 'sidebar-right' ? 'sidebar-left' : 'sidebar-right'
+        next = next === 'main-sidebar-right' ? 'sidebar-right' : (next === 'sidebar-right' ? 'sidebar-left' : 'main-sidebar-right')
     } else if (currentCount === 4) {
         next = 'grid-2x2'
     }
@@ -417,7 +422,7 @@ const handleCycleLayout = (workspace) => {
                         @toggle-calendar="toggleCalendar"
                         @reorder-calendars="reorderCalendars"
                         @range-changed="(r) => fetchEvents(r.start, r.end)"
-                        @add-app="handleAddApp"
+                        @add-app="(idx) => handleAddApp(workspace.id, idx)"
                         @close-edit="handleCloseEdit"
                         @add-slot="handleAddSlot(workspace)"
                         @remove-slot="(idx) => handleRemoveSlot(workspace, idx)"

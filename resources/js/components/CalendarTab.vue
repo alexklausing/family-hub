@@ -25,7 +25,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 import {
-    Clock,
     ArrowRight,
     ChevronRight,
     ChevronLeft,
@@ -277,20 +276,7 @@ watch(
     },
 )
 
-watch(isSidebarOpen, () => {
-    // Force FullCalendar to recalculate its grid width during the 500ms CSS transition
-    const fc = fullCalendar.value?.getApi()
-    if (fc) {
-        const start = Date.now()
-        const animate = () => {
-            fc.updateSize()
-            if (Date.now() - start < 550) {
-                requestAnimationFrame(animate)
-            }
-        }
-        requestAnimationFrame(animate)
-    }
-})
+
 
 watch(
     () => [props.events, props.availableCalendars],
@@ -660,17 +646,33 @@ const handleDocumentClick = (e) => {
     }
 }
 
+let resizeObserver = null
+const calendarContainer = ref(null)
+
 onMounted(() => {
     document.addEventListener('click', handleDocumentClick)
+    
+    if (calendarContainer.value) {
+        resizeObserver = new ResizeObserver(() => {
+            const fc = fullCalendar.value?.getApi()
+            if (fc) {
+                fc.updateSize()
+            }
+        })
+        resizeObserver.observe(calendarContainer.value)
+    }
 })
 
 onUnmounted(() => {
     document.removeEventListener('click', handleDocumentClick)
+    if (resizeObserver) {
+        resizeObserver.disconnect()
+    }
 })
 </script>
 
 <template>
-    <div class="relative flex h-full w-full flex-col gap-4 overflow-hidden">
+    <div ref="calendarContainer" class="relative flex h-full w-full flex-col gap-4 overflow-hidden">
         <!-- User Slide-out Drawer (Left) -->
         <Transition
             enter-active-class="transition-transform duration-500 ease-out"
@@ -756,35 +758,21 @@ onUnmounted(() => {
             ></div>
         </Transition>
 
-        <div class="flex shrink-0 items-center justify-between px-2">
+        <div class="flex shrink-0 items-center justify-between px-2 mt-8">
             <div class="flex items-center gap-4">
                 <!-- User Button replaces static Title -->
                 <Button
                     variant="ghost"
-                    class="flex h-14 items-center gap-4 rounded-2xl border border-white/10 bg-white/40 px-6 shadow-none backdrop-blur-2xl transition-all select-none hover:bg-white/60 active:scale-95 dark:bg-white/5"
+                    class="h-auto p-0 hover:bg-transparent flex items-center gap-2 group transition-all select-none active:scale-95"
                     v-on="profileButtonHandlers"
                 >
-                    <div
-                        class="bg-primary/10 pointer-events-none flex h-8 w-8 items-center justify-center rounded-lg"
-                    >
+                    <h3 class="text-sm font-black tracking-widest uppercase text-black/40 dark:text-white/40 flex items-center gap-2 transition-colors group-hover:text-black/60 dark:group-hover:text-white/60">
                         <component
-                            :is="
-                                profiles.find((p) => p.name === activeProfile)
-                                    ?.icon || User
-                            "
-                            class="text-primary h-5 w-5"
+                            :is="profiles.find((p) => p.name === activeProfile)?.icon || User"
+                            class="h-4 w-4"
                         />
-                    </div>
-                    <span
-                        class="pointer-events-none text-lg font-black tracking-tight uppercase italic"
-                    >
-                        {{
-                            activeProfile === 'Family'
-                                ? 'Family'
-                                : activeProfile + "'s"
-                        }}
-                        Calendar
-                    </span>
+                        {{ activeProfile === 'Family' ? 'Family' : activeProfile + "'s" }} Calendar
+                    </h3>
                 </Button>
 
                 <div
@@ -840,22 +828,6 @@ onUnmounted(() => {
                     </Button>
                 </div>
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    @click="isSidebarOpen = !isSidebarOpen"
-                    :class="[
-                        'h-12 w-12 rounded-2xl transition-all',
-                        isSidebarOpen
-                            ? 'bg-black/80 text-white dark:bg-white/10 dark:text-white shadow-md'
-                            : 'border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 hover:bg-white/60 dark:hover:bg-white/10',
-                    ]"
-                >
-                    <component
-                        :is="isSidebarOpen ? PanelRightClose : PanelRightOpen"
-                        class="h-6 w-6"
-                    />
-                </Button>
             </div>
         </div>
 
@@ -874,108 +846,8 @@ onUnmounted(() => {
                 </CardContent>
             </Card>
 
-            <!-- Collapsible Up Next Sidebar -->
-            <div
-                class="flex shrink-0 overflow-hidden transition-all duration-500 ease-in-out"
-                :class="
-                    isSidebarOpen
-                        ? 'ml-6 w-80 opacity-100'
-                        : 'ml-0 w-0 opacity-0'
-                "
-            >
-                <div class="flex min-h-0 w-80 shrink-0 flex-col gap-4">
-                    <Card
-                        class="flex flex-1 flex-col overflow-hidden rounded-[2.5rem] border-none bg-white/60 shadow-none backdrop-blur-3xl dark:bg-white/5"
-                    >
-                        <CardHeader class="shrink-0 p-8 pb-4">
-                            <CardTitle
-                                class="text-primary flex items-center gap-3 text-2xl font-black tracking-tight uppercase italic"
-                            >
-                                <Clock class="h-6 w-6" />
-                                Up Next
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent
-                            class="custom-scrollbar flex-1 overflow-y-auto p-6 pt-2"
-                        >
-                            <div class="space-y-3">
-                                <div
-                                    v-if="sortedSchedule.length > 0"
-                                    class="space-y-2"
-                                >
-                                    <div
-                                        v-for="event in sortedSchedule"
-                                        :key="event.id"
-                                        class="group relative flex cursor-pointer items-center gap-4 rounded-[1.5rem] bg-white/40 p-4 transition-all hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
-                                    >
-                                        <div
-                                            class="h-8 w-1 shrink-0 rounded-full"
-                                            :style="{
-                                                backgroundColor:
-                                                    event.calendar?.color ||
-                                                    '#3b82f6',
-                                            }"
-                                        ></div>
-                                        <div class="min-w-0 flex-1">
-                                            <p
-                                                class="truncate text-sm leading-tight font-black tracking-tight"
-                                            >
-                                                {{ event.title }}
-                                            </p>
-                                            <p
-                                                class="mt-0.5 text-[9px] font-black tracking-widest uppercase opacity-50"
-                                            >
-                                                <span
-                                                    v-if="
-                                                        getEventDate(
-                                                            event,
-                                                        ).toDateString() ===
-                                                        new Date().toDateString()
-                                                    "
-                                                    >Today</span
-                                                >
-                                                <span v-else>{{
-                                                    getEventDate(
-                                                        event,
-                                                    ).toLocaleDateString([], {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                    })
-                                                }}</span>
-                                                <span v-if="!event.all_day">
-                                                    •
-                                                    {{
-                                                        getEventDate(
-                                                            event,
-                                                        ).toLocaleTimeString(
-                                                            [],
-                                                            {
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                            },
-                                                        )
-                                                    }}</span
-                                                >
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    v-else
-                                    class="py-12 text-center opacity-20"
-                                >
-                                    <History class="mx-auto mb-4 h-12 w-12" />
-                                    <p class="text-sm font-bold uppercase">
-                                        Clear Schedule
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
         </div>
-
+        
         <!-- Event Management Modal -->
         <Dialog v-model:open="isModalOpen">
             <DialogContent

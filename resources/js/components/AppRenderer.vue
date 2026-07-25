@@ -5,6 +5,9 @@ import ShoppingList from './shopping/ShoppingList.vue'
 import WeatherTab from './WeatherTab.vue'
 import ChoresTab from './chores/ChoresTab.vue'
 import AuraTab from './AuraTab.vue'
+import CountdownWidget from './CountdownWidget.vue'
+import UpNextWidget from './UpNextWidget.vue'
+import WordOfTheDayWidget from './WordOfTheDayWidget.vue'
 
 const props = defineProps({
     appId: {
@@ -64,6 +67,12 @@ const emit = defineEmits([
         />
         
         <AuraTab v-else-if="appId === 'aura'" />
+        
+        <CountdownWidget v-else-if="appId === 'countdowns'" class="h-full w-full" />
+        
+        <UpNextWidget v-else-if="appId === 'up-next'" :scheduleEvents="scheduleEvents" class="h-full w-full" />
+
+        <WordOfTheDayWidget v-else-if="appId === 'word-of-the-day'" />
         
         <div v-else class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">
             Unknown App: {{ appId }}

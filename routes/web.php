@@ -28,6 +28,11 @@ Route::post('/api/profiles/{name}/visible-calendars', [CalendarManagementControl
 
 Route::get('/api/weather', [WeatherController::class, 'index']);
 
+Route::get('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'index']);
+Route::post('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'store']);
+Route::put('/api/countdowns/{countdown}', [\App\Http\Controllers\CountdownController::class, 'update']);
+Route::delete('/api/countdowns/{countdown}', [\App\Http\Controllers\CountdownController::class, 'destroy']);
+
 Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 'index']);
 
 Route::get('/api/recipes', [RecipeController::class, 'index']);

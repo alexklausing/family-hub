@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Plus, X, Pencil, LayoutTemplate, Check, Trash2, Minus } from 'lucide-vue-next'
+import { Plus, X, Pencil, LayoutTemplate, Check, Trash2, Minus, PanelRightClose, PanelRightOpen } from 'lucide-vue-next'
 import AppRenderer from './AppRenderer.vue'
+
+const isSidebarCollapsed = ref(false)
 
 const props = defineProps({
     workspace: {
@@ -49,6 +51,12 @@ const layoutClass = computed(() => {
     if (l === 'split-vertical') return 'grid grid-cols-2 grid-rows-1 gap-6'
     if (l === 'sidebar-right') return 'grid grid-cols-2 grid-rows-2 gap-6'
     if (l === 'sidebar-left') return 'grid grid-cols-2 grid-rows-2 gap-6'
+    if (l === 'main-sidebar-right') {
+        if (isSidebarCollapsed.value) {
+            return 'grid grid-cols-[1fr_0px] grid-rows-2 gap-x-0 gap-y-6 transition-all duration-500 ease-in-out'
+        }
+        return 'grid grid-cols-[1fr_350px] grid-rows-2 gap-6 transition-all duration-500 ease-in-out'
+    }
     if (l === 'grid-2x2') return 'grid grid-cols-2 grid-rows-2 gap-6'
     return 'grid grid-cols-1 grid-rows-1'
 })
@@ -56,7 +64,7 @@ const layoutClass = computed(() => {
 const getSlotClass = (index, total) => {
     const l = props.workspace.layout || 'full'
     if (total === 3) {
-        if (l === 'sidebar-right' && index === 0) return 'row-span-2'
+        if ((l === 'sidebar-right' || l === 'main-sidebar-right') && index === 0) return 'row-span-2'
         if (l === 'sidebar-left' && index === 2) return 'row-span-2 col-start-2 row-start-1'
     }
     return ''
@@ -82,6 +90,19 @@ const onDrop = (e, dropIndex) => {
 
 <template>
     <div class="relative w-full h-full p-2">
+        <!-- Floating Sidebar Toggle Button -->
+        <button
+            v-if="workspace.layout === 'main-sidebar-right' && !isEditing"
+            @click="isSidebarCollapsed = !isSidebarCollapsed"
+            :class="[
+                'absolute z-50 top-1/2 -translate-y-1/2 transition-all duration-500 flex items-center justify-center w-8 h-16 rounded-l-2xl bg-white/40 dark:bg-black/40 backdrop-blur-md border border-r-0 border-white/20 hover:bg-white/60 dark:hover:bg-black/60 shadow-lg text-slate-700 dark:text-slate-300',
+                isSidebarCollapsed ? 'right-2' : 'right-[366px]'
+            ]"
+            style="transform-origin: right;"
+        >
+            <component :is="isSidebarCollapsed ? PanelRightOpen : PanelRightClose" class="w-5 h-5" />
+        </button>
+
         <div :class="['w-full h-full', layoutClass]">
             <template v-if="workspace.apps.length > 0">
                 <div 
@@ -94,10 +115,11 @@ const onDrop = (e, dropIndex) => {
                     @dragleave="dragOverIndex === index ? dragOverIndex = null : null"
                     @drop="onDrop($event, index)"
                     :class="[
-                        'relative min-h-0 min-w-0 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden transition-all duration-200', 
+                        'relative min-h-0 min-w-0 bg-slate-200 dark:bg-slate-800 rounded-3xl overflow-hidden transition-all duration-500 ease-in-out', 
                         getSlotClass(index, workspace.apps.length),
                         isEditing ? 'cursor-grab active:cursor-grabbing animate-jiggle origin-center shadow-lg' : '',
-                        dragOverIndex === index ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-slate-100 dark:ring-offset-slate-900 scale-[0.98]' : ''
+                        dragOverIndex === index ? 'ring-4 ring-indigo-500 ring-offset-4 ring-offset-slate-100 dark:ring-offset-slate-900 scale-[0.98]' : '',
+                        (workspace.layout === 'main-sidebar-right' && isSidebarCollapsed && index > 0) ? 'opacity-0 translate-x-12' : 'opacity-100 translate-x-0'
                     ]"
                     :style="{ animationDelay: isEditing ? `${(index * 0.1)}s` : '0s' }"
                 >
