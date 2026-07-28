@@ -25,6 +25,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    timeOffset: {
+        type: Number,
+        required: true,
+    },
     themePreference: {
         type: String,
         required: true,
@@ -55,6 +59,7 @@ const emit = defineEmits([
     'update:open',
 
     'update:localTimezone',
+    'update:timeOffset',
     'update:themePreference',
     'update:defaultRadarLayers',
     'update:developerSettings',
@@ -75,6 +80,11 @@ const isOpen = computed({
 const timezone = computed({
     get: () => props.localTimezone,
     set: (val) => emit('update:localTimezone', val),
+})
+
+const tOffset = computed({
+    get: () => props.timeOffset,
+    set: (val) => emit('update:timeOffset', parseInt(val) || 0),
 })
 
 const theme = computed({
@@ -227,6 +237,26 @@ const refreshKiosk = async () => {
                                 <option value="Pacific/Honolulu">Hawaii Time (Pacific/Honolulu)</option>
                                 <option value="UTC">UTC</option>
                             </select>
+                            
+                            <div class="mt-6 pt-6 border-t border-white/5">
+                                <div class="mb-4">
+                                    <h4 class="text-md font-black tracking-tight">Manual Time Offset</h4>
+                                    <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Add or subtract hours if clock is wrong</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <input 
+                                        type="range" 
+                                        v-model="tOffset" 
+                                        min="-12" 
+                                        max="12" 
+                                        step="1"
+                                        class="flex-1 accent-primary" 
+                                    />
+                                    <div class="bg-primary/10 text-primary h-10 w-16 rounded-xl flex items-center justify-center font-black">
+                                        {{ tOffset > 0 ? '+' : '' }}{{ tOffset }}h
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">

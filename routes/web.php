@@ -98,9 +98,14 @@ Route::post('/api/monitor/settings', function (\Illuminate\Http\Request $request
     return response()->json($settings);
 });
 
-Route::post('/api/monitor/sleep', function () {
-    \Illuminate\Support\Facades\Artisan::call('monitor:control', ['state' => 'off']);
-    return response()->json(['message' => 'Monitor put to sleep']);
+Route::get('/api/monitor/state', function () {
+    return response()->json(['state' => Cache::get('monitor_state', 'wake')]);
+});
+
+Route::post('/api/monitor/state', function (\Illuminate\Http\Request $request) {
+    $state = $request->validate(['state' => 'required|in:sleep,wake']);
+    Cache::put('monitor_state', $state['state']);
+    return response()->json(['message' => 'State updated']);
 });
 
 // Auto-patch Vite public/hot for Kiosk and Remote Mac access

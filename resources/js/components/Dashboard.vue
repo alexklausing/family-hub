@@ -32,6 +32,7 @@ const {
     toggleCalendar,
     handleSync,
     localTimezone,
+    timeOffset,
     saveFilters,
     defaultCalendarId,
     reorderCalendars,
@@ -56,6 +57,10 @@ const isSleeping = ref(false)
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
+
+watch(isSleeping, (newVal) => {
+    axios.post('/api/monitor/state', { state: newVal ? 'sleep' : 'wake' }).catch(console.error)
+})
 
 const themePreference = ref(localStorage.getItem('themePreference') || 'auto')
 
@@ -381,6 +386,7 @@ const handleCycleLayout = (workspace) => {
             <DashboardHeader 
                 :active-tab="activeTab" 
                 :local-timezone="localTimezone" 
+                :time-offset="timeOffset"
                 :workspaces="workspaces" 
                 :is-editing="isEditingLayouts"
                 @open-settings="isSettingsDialogOpen = true" 
@@ -508,6 +514,7 @@ const handleCycleLayout = (workspace) => {
         <SettingsDialog
             v-model:open="isSettingsDialogOpen"
             v-model:localTimezone="localTimezone"
+            v-model:timeOffset="timeOffset"
             v-model:themePreference="themePreference"
             v-model:defaultRadarLayers="defaultRadarLayers"
             v-model:developerSettings="developerSettings"
@@ -517,6 +524,7 @@ const handleCycleLayout = (workspace) => {
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
+            @update:timeOffset="saveFilters"
             @update:monitorSettings="saveFilters"
             @sleep-now="isSleeping = true"
             @reset-layouts="() => { resetWorkspaces(); activeTab = workspaces[0]?.id || 'other'; }"

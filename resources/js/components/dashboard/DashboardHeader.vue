@@ -32,6 +32,10 @@ const props = defineProps({
         type: String,
         default: 'America/New_York',
     },
+    timeOffset: {
+        type: Number,
+        default: 0,
+    },
     workspaces: {
         type: Array,
         default: () => [],
@@ -96,7 +100,11 @@ const currentTime = ref('')
 const currentDate = ref('')
 
 const updateDateTime = () => {
-    const now = new Date()
+    let now = new Date()
+    if (props.timeOffset) {
+        now.setHours(now.getHours() + props.timeOffset)
+    }
+    
     currentTime.value = now.toLocaleTimeString([], {
         timeZone: props.localTimezone,
         hour: '2-digit',

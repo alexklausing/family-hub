@@ -19,6 +19,7 @@ export function useDashboard() {
     const localTimezone = ref(
         Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
     )
+    const timeOffset = ref(0)
     
     // Workspaces
     const workspaces = ref([])
@@ -74,6 +75,9 @@ export function useDashboard() {
 
         const savedTimezone = localStorage.getItem('dashboard_timezone')
         if (savedTimezone) localTimezone.value = savedTimezone
+        
+        const savedOffset = localStorage.getItem('dashboard_time_offset')
+        if (savedOffset) timeOffset.value = parseInt(savedOffset) || 0
 
         const savedOrder = localStorage.getItem('dashboard_calendar_order')
         if (savedOrder) calendarOrder.value = JSON.parse(savedOrder)
@@ -98,6 +102,7 @@ export function useDashboard() {
             JSON.stringify(filtersByProfile.value),
         )
         localStorage.setItem('dashboard_timezone', localTimezone.value)
+        localStorage.setItem('dashboard_time_offset', timeOffset.value.toString())
         localStorage.setItem(
             'dashboard_calendar_order',
             JSON.stringify(calendarOrder.value),
@@ -351,6 +356,7 @@ export function useDashboard() {
         availableCalendars,
         filtersByProfile,
         localTimezone,
+        timeOffset,
         saveFilters,
         visibleCalendarIds,
         allEvents,
