@@ -19,9 +19,15 @@ while true; do
   if [ "$STATE" != "$LAST_STATE" ] && [ ! -z "$STATE" ]; then
     if [ "$STATE" = "sleep" ]; then
       echo "$(date): Dashboard requested SLEEP. Turning off monitor."
+      # Try Wayland (GNOME) first
+      busctl --user set-property org.gnome.Mutter.DisplayConfig /org/gnome/Mutter/DisplayConfig org.gnome.Mutter.DisplayConfig PowerSaveMode i 1 2>/dev/null || \
+      # Fallback to X11
       DISPLAY=:0 xset dpms force off
     elif [ "$STATE" = "wake" ]; then
       echo "$(date): Dashboard requested WAKE. Turning on monitor."
+      # Try Wayland (GNOME) first
+      busctl --user set-property org.gnome.Mutter.DisplayConfig /org/gnome/Mutter/DisplayConfig org.gnome.Mutter.DisplayConfig PowerSaveMode i 0 2>/dev/null || \
+      # Fallback to X11
       DISPLAY=:0 xset dpms force on
     fi
     LAST_STATE=$STATE
