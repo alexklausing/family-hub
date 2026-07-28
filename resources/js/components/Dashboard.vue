@@ -218,11 +218,41 @@ onMounted(() => {
             // Silently ignore network errors to prevent console spam
         }
     }, 15000)
+
+    window.addEventListener('mousemove', resetInactivityTimer)
+    window.addEventListener('touchstart', resetInactivityTimer)
+    window.addEventListener('click', resetInactivityTimer)
+    window.addEventListener('keydown', resetInactivityTimer)
+    resetInactivityTimer()
+})
+
+let inactivityTimer = null
+const resetInactivityTimer = () => {
+    if (inactivityTimer) clearTimeout(inactivityTimer)
+    
+    if (monitorSettings.value.enabled && monitorSettings.value.idleTimeout > 0 && !isSleeping.value) {
+        inactivityTimer = setTimeout(() => {
+            isSleeping.value = true
+        }, monitorSettings.value.idleTimeout * 60000)
+    }
+}
+
+watch(() => monitorSettings.value.idleTimeout, resetInactivityTimer)
+watch(() => monitorSettings.value.enabled, resetInactivityTimer)
+watch(isSleeping, (newVal) => {
+    if (!newVal) {
+        resetInactivityTimer() // Reset timer when waking up
+    }
 })
 
 onUnmounted(() => {
     if (themeInterval) clearInterval(themeInterval)
     if (kioskInterval) clearInterval(kioskInterval)
+    window.removeEventListener('mousemove', resetInactivityTimer)
+    window.removeEventListener('touchstart', resetInactivityTimer)
+    window.removeEventListener('click', resetInactivityTimer)
+    window.removeEventListener('keydown', resetInactivityTimer)
+    if (inactivityTimer) clearTimeout(inactivityTimer)
 })
 
 // (Moved up for activeTab init)
@@ -392,6 +422,7 @@ const handleCycleLayout = (workspace) => {
                 @open-settings="isSettingsDialogOpen = true" 
                 @toggle-edit="handleToggleEdit"
                 @reorder-workspaces="reorderWorkspaces"
+                @sleep-now="isSleeping = true"
             />
 
             <!-- Global Weather Alerts Banner -->

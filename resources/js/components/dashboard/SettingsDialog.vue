@@ -334,6 +334,17 @@ const refreshKiosk = async () => {
                                 </div>
                             </div>
                             
+                            <div class="mt-4" :class="!monitorSettingsData.enabled ? 'opacity-50 pointer-events-none' : ''">
+                                <label class="text-xs font-bold uppercase tracking-widest opacity-60 mb-2 block">Inactivity Sleep Timer</label>
+                                <select v-model="monitorSettingsData.idleTimeout" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2">
+                                    <option :value="0">Never (Only sleep during scheduled hours)</option>
+                                    <option :value="5">Sleep after 5 minutes of inactivity</option>
+                                    <option :value="15">Sleep after 15 minutes of inactivity</option>
+                                    <option :value="30">Sleep after 30 minutes of inactivity</option>
+                                    <option :value="60">Sleep after 1 hour of inactivity</option>
+                                </select>
+                            </div>
+                            
                             <div class="mt-6 pt-6 border-t border-white/5">
                                 <Button
                                     @click="sleepNow"

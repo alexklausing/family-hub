@@ -10,6 +10,11 @@ LAST_STATE="wake"
 echo "Starting Kiosk Monitor Bridge with X11 DPMS..."
 echo "Polling $URL for monitor state..."
 
+# Disable native Ubuntu screensaver so Vue's new inactivity timer can take full control
+DISPLAY=:0 xset s off
+DISPLAY=:0 xset -dpms
+DISPLAY=:0 xset s noblank
+
 while true; do
   # Fetch the state from the API
   RESPONSE=$(curl -s $URL)

@@ -20,6 +20,7 @@ import {
     ImageIcon,
     Pencil,
     Check,
+    Moon,
 } from 'lucide-vue-next'
 import { useWeather } from '@/composables/useWeather'
 
@@ -46,7 +47,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['open-settings', 'toggle-edit', 'reorder-workspaces'])
+const emit = defineEmits(['open-settings', 'toggle-edit', 'reorder-workspaces', 'sleep-now'])
 
 const dragOverIndex = ref(null)
 
@@ -244,6 +245,15 @@ onUnmounted(() => {
                 class="h-16 w-16 rounded-3xl shadow-none backdrop-blur-2xl transition-all bg-indigo-500 text-white hover:bg-indigo-600"
             >
                 <Check class="h-7 w-7" />
+            </Button>
+
+            <Button
+                variant="ghost"
+                size="icon"
+                @click="emit('sleep-now')"
+                class="h-16 w-16 rounded-3xl bg-white/40 shadow-none backdrop-blur-2xl transition-all hover:bg-white/60 dark:bg-white/5"
+            >
+                <Moon class="h-7 w-7" />
             </Button>
 
             <Button
