@@ -42,7 +42,8 @@ const {
     reorderWorkspaces,
     resetWorkspaces,
     unusedApps,
-    toggleAppActive
+    toggleAppActive,
+    monitorSettings
 } = useDashboard()
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
@@ -50,6 +51,8 @@ const isEditingLayouts = ref(false)
 const addingToSlotIndex = ref(null)
 const addingToWorkspaceId = ref(null)
 const unpinnedAppId = ref(null)
+
+const isSleeping = ref(false)
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
@@ -180,6 +183,20 @@ onMounted(() => {
     
     updateTheme()
     themeInterval = setInterval(updateTheme, 60000)
+
+    // Check Auto-Sleep every minute
+    setInterval(() => {
+        if (!monitorSettings.value.enabled) return
+        
+        const now = new Date()
+        const currentTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+        
+        if (currentTime === monitorSettings.value.off) {
+            isSleeping.value = true
+        } else if (currentTime === monitorSettings.value.on) {
+            isSleeping.value = false
+        }
+    }, 60000)
 
     // Kiosk Version Polling (Check every 15 seconds)
     axios.get('/api/kiosk/version').then(res => {
@@ -343,6 +360,14 @@ const handleCycleLayout = (workspace) => {
     <div
         class="flex h-screen max-h-screen flex-col overflow-hidden bg-[#f2f2f7] text-black dark:text-white p-4 font-sans transition-colors duration-500 lg:p-6 dark:bg-[#000000]"
     >
+        <!-- Software Sleep Overlay -->
+        <div 
+            v-if="isSleeping" 
+            @click="isSleeping = false"
+            class="fixed inset-0 z-[99999] bg-black cursor-pointer flex items-center justify-center transition-opacity duration-1000"
+        >
+        </div>
+
         <!-- Full Screen Aura Overlay -->
         <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'aura'" class="fixed inset-0 z-[100] bg-black">
             <button @click="activeTab = 'other'" class="absolute top-6 left-6 z-[110] p-4 bg-white/10 hover:bg-white/30 text-white rounded-full backdrop-blur-md transition-colors">
@@ -486,11 +511,14 @@ const handleCycleLayout = (workspace) => {
             v-model:themePreference="themePreference"
             v-model:defaultRadarLayers="defaultRadarLayers"
             v-model:developerSettings="developerSettings"
-            v-model:is-editing-layouts="isEditingLayouts"
+            v-model:isEditingLayouts="isEditingLayouts"
             v-model:continuousRecipeScroll="continuousRecipeScroll"
+            v-model:monitorSettings="monitorSettings"
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
+            @update:monitorSettings="saveFilters"
+            @sleep-now="isSleeping = true"
             @reset-layouts="() => { resetWorkspaces(); activeTab = workspaces[0]?.id || 'other'; }"
         />
 

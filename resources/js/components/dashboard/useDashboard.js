@@ -23,6 +23,13 @@ export function useDashboard() {
     // Workspaces
     const workspaces = ref([])
 
+    // Monitor Settings
+    const monitorSettings = ref({
+        enabled: true,
+        off: '22:00',
+        on: '07:00'
+    })
+
     const getAppName = (id) => {
         const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura' }
         return names[id] || id
@@ -78,6 +85,11 @@ export function useDashboard() {
             unusedApps.value = ['fun-facts']
             saveFilters()
         }
+
+        const savedMonitor = localStorage.getItem('dashboard_monitor_settings')
+        if (savedMonitor) {
+            monitorSettings.value = JSON.parse(savedMonitor)
+        }
     }
 
     const saveFilters = () => {
@@ -97,6 +109,10 @@ export function useDashboard() {
         localStorage.setItem(
             'dashboard_unused_apps',
             JSON.stringify(unusedApps.value)
+        )
+        localStorage.setItem(
+            'dashboard_monitor_settings',
+            JSON.stringify(monitorSettings.value)
         )
     }
 
@@ -354,6 +370,7 @@ export function useDashboard() {
         reorderWorkspaces,
         resetWorkspaces,
         unusedApps,
-        toggleAppActive
+        toggleAppActive,
+        monitorSettings
     }
 }

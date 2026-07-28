@@ -9,4 +9,3 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command('sync:all')->everyFifteenMinutes();
-Schedule::command('monitor:auto')->everyMinute()->timezone('America/New_York');

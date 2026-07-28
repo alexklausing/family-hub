@@ -45,6 +45,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    monitorSettings: {
+        type: Object,
+        required: true,
+    },
 })
 
 const emit = defineEmits([
@@ -56,8 +60,10 @@ const emit = defineEmits([
     'update:developerSettings',
     'update:isEditingLayouts',
     'update:continuousRecipeScroll',
+    'update:monitorSettings',
     'open-sync',
     'reset-layouts',
+    'sleep-now'
 ])
 
 const isOpen = computed({
@@ -103,45 +109,14 @@ const resetLayouts = () => {
     }
 }
 
-const monitorSettings = ref({
-    enabled: true,
-    off: '22:00',
-    on: '07:00'
+const monitorSettingsData = computed({
+    get: () => props.monitorSettings,
+    set: (val) => emit('update:monitorSettings', val),
 })
 
-const fetchMonitorSettings = async () => {
-    try {
-        const { data } = await axios.get('/api/monitor/settings')
-        monitorSettings.value = data
-    } catch (e) {
-        console.error('Failed to load monitor settings', e)
-    }
-}
-
-const saveMonitorSettings = async () => {
-    try {
-        await axios.post('/api/monitor/settings', monitorSettings.value)
-    } catch (e) {
-        console.error('Failed to save monitor settings', e)
-    }
-}
-
-import { watch } from 'vue'
-watch(isOpen, (newVal) => {
-    if (newVal) {
-        fetchMonitorSettings()
-    } else {
-        saveMonitorSettings()
-    }
-})
-
-const sleepNow = async () => {
-    try {
-        await axios.post('/api/monitor/sleep')
-        isOpen.value = false
-    } catch (e) {
-        console.error('Failed to put monitor to sleep', e)
-    }
+const sleepNow = () => {
+    emit('sleep-now')
+    isOpen.value = false
 }
 
 const activeTab = ref('general')
@@ -315,17 +290,17 @@ const refreshKiosk = async () => {
                                         <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Turn off screen to save energy</p>
                                     </div>
                                 </div>
-                                <Switch :checked="monitorSettings.enabled" @update:checked="val => monitorSettings.enabled = val" />
+                                <Switch :checked="monitorSettingsData.enabled" @update:checked="val => monitorSettingsData = { ...monitorSettingsData, enabled: val }" />
                             </div>
                             
-                            <div class="flex items-center gap-4 mt-2" :class="!monitorSettings.enabled ? 'opacity-50 pointer-events-none' : ''">
+                            <div class="flex items-center gap-4 mt-2" :class="!monitorSettingsData.enabled ? 'opacity-50 pointer-events-none' : ''">
                                 <div class="flex-1 flex flex-col gap-2">
                                     <label class="text-xs font-bold uppercase tracking-widest opacity-60">Sleep Time</label>
-                                    <input type="time" v-model="monitorSettings.off" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
+                                    <input type="time" v-model="monitorSettingsData.off" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
                                 </div>
                                 <div class="flex-1 flex flex-col gap-2">
                                     <label class="text-xs font-bold uppercase tracking-widest opacity-60">Wake Time</label>
-                                    <input type="time" v-model="monitorSettings.on" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
+                                    <input type="time" v-model="monitorSettingsData.on" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
                                 </div>
                             </div>
                             
