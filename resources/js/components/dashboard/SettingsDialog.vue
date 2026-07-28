@@ -135,6 +135,15 @@ watch(isOpen, (newVal) => {
     }
 })
 
+const sleepNow = async () => {
+    try {
+        await axios.post('/api/monitor/sleep')
+        isOpen.value = false
+    } catch (e) {
+        console.error('Failed to put monitor to sleep', e)
+    }
+}
+
 const activeTab = ref('general')
 
 import axios from 'axios'
@@ -318,6 +327,16 @@ const refreshKiosk = async () => {
                                     <label class="text-xs font-bold uppercase tracking-widest opacity-60">Wake Time</label>
                                     <input type="time" v-model="monitorSettings.on" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
                                 </div>
+                            </div>
+                            
+                            <div class="mt-6 pt-6 border-t border-white/5">
+                                <Button
+                                    @click="sleepNow"
+                                    variant="secondary"
+                                    class="h-14 w-full rounded-2xl font-black transition-all shadow-none bg-black/20 hover:bg-black/40 dark:bg-white/10 dark:hover:bg-white/20"
+                                >
+                                    <Moon class="w-5 h-5 mr-2" /> Sleep Now
+                                </Button>
                             </div>
                         </div>
                         <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">

@@ -98,6 +98,11 @@ Route::post('/api/monitor/settings', function (\Illuminate\Http\Request $request
     return response()->json($settings);
 });
 
+Route::post('/api/monitor/sleep', function () {
+    \Illuminate\Support\Facades\Artisan::call('monitor:control', ['state' => 'off']);
+    return response()->json(['message' => 'Monitor put to sleep']);
+});
+
 // Auto-patch Vite public/hot for Kiosk and Remote Mac access
 if (file_exists(public_path('hot'))) {
     $hotContent = file_get_contents(public_path('hot'));
