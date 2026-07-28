@@ -3,10 +3,11 @@
 # This script polls the local dashboard to physically power down the monitor backlight.
 # To run this in the background, you can use: nohup ./kiosk-bridge.sh &
 
-URL="http://localhost/api/monitor/state"
+APP_URL=$(grep APP_URL .env | cut -d '=' -f2)
+URL="${APP_URL}/api/monitor/state"
 LAST_STATE="wake"
 
-echo "Starting Kiosk Monitor Bridge..."
+echo "Starting Kiosk Monitor Bridge with X11 DPMS..."
 echo "Polling $URL for monitor state..."
 
 while true; do
