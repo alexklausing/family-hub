@@ -16,11 +16,12 @@ while true; do
   
   if [ "$STATE" != "$LAST_STATE" ] && [ ! -z "$STATE" ]; then
     if [ "$STATE" = "sleep" ]; then
-      echo "$(date): Dashboard requested SLEEP. Using ddcutil to cut hardware power."
-      ddcutil setvcp D6 04
+      echo "$(date): Dashboard requested SLEEP. Using X11 DPMS Standby."
+      DISPLAY=:0 xset dpms force standby
     elif [ "$STATE" = "wake" ]; then
-      echo "$(date): Dashboard requested WAKE. Using ddcutil to restore hardware power."
-      ddcutil setvcp D6 01
+      echo "$(date): Dashboard requested WAKE. Waking and forcing HDMI handshake."
+      DISPLAY=:0 xset dpms force on
+      DISPLAY=:0 xrandr --auto
     fi
     LAST_STATE=$STATE
   fi
