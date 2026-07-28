@@ -80,6 +80,24 @@ Route::post('/api/kiosk/refresh', function () {
     return response()->json(['message' => 'Refresh signal sent']);
 });
 
+Route::get('/api/monitor/settings', function () {
+    return response()->json(Cache::get('monitor_settings', [
+        'enabled' => true,
+        'off' => '22:00',
+        'on' => '07:00'
+    ]));
+});
+
+Route::post('/api/monitor/settings', function (\Illuminate\Http\Request $request) {
+    $settings = $request->validate([
+        'enabled' => 'required|boolean',
+        'off' => 'required|string',
+        'on' => 'required|string',
+    ]);
+    Cache::put('monitor_settings', $settings);
+    return response()->json($settings);
+});
+
 // Auto-patch Vite public/hot for Kiosk and Remote Mac access
 if (file_exists(public_path('hot'))) {
     $hotContent = file_get_contents(public_path('hot'));

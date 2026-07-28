@@ -103,6 +103,38 @@ const resetLayouts = () => {
     }
 }
 
+const monitorSettings = ref({
+    enabled: true,
+    off: '22:00',
+    on: '07:00'
+})
+
+const fetchMonitorSettings = async () => {
+    try {
+        const { data } = await axios.get('/api/monitor/settings')
+        monitorSettings.value = data
+    } catch (e) {
+        console.error('Failed to load monitor settings', e)
+    }
+}
+
+const saveMonitorSettings = async () => {
+    try {
+        await axios.post('/api/monitor/settings', monitorSettings.value)
+    } catch (e) {
+        console.error('Failed to save monitor settings', e)
+    }
+}
+
+import { watch } from 'vue'
+watch(isOpen, (newVal) => {
+    if (newVal) {
+        fetchMonitorSettings()
+    } else {
+        saveMonitorSettings()
+    }
+})
+
 const activeTab = ref('general')
 
 import axios from 'axios'
@@ -260,6 +292,32 @@ const refreshKiosk = async () => {
                                 >
                                     <Moon class="w-4 h-4" /> Dark
                                 </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
+                            <div class="mb-6 flex items-center justify-between gap-5">
+                                <div class="flex items-center gap-5">
+                                    <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                        <Moon class="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-black tracking-tight">Display Auto-Sleep</h4>
+                                        <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Turn off screen to save energy</p>
+                                    </div>
+                                </div>
+                                <Switch :checked="monitorSettings.enabled" @update:checked="val => monitorSettings.enabled = val" />
+                            </div>
+                            
+                            <div class="flex items-center gap-4 mt-2" :class="!monitorSettings.enabled ? 'opacity-50 pointer-events-none' : ''">
+                                <div class="flex-1 flex flex-col gap-2">
+                                    <label class="text-xs font-bold uppercase tracking-widest opacity-60">Sleep Time</label>
+                                    <input type="time" v-model="monitorSettings.off" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
+                                </div>
+                                <div class="flex-1 flex flex-col gap-2">
+                                    <label class="text-xs font-bold uppercase tracking-widest opacity-60">Wake Time</label>
+                                    <input type="time" v-model="monitorSettings.on" class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 font-bold outline-none focus:ring-2" />
+                                </div>
                             </div>
                         </div>
                         <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
