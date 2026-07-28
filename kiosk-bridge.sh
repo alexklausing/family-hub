@@ -16,12 +16,11 @@ while true; do
   
   if [ "$STATE" != "$LAST_STATE" ] && [ ! -z "$STATE" ]; then
     if [ "$STATE" = "sleep" ]; then
-      echo "$(date): Dashboard requested SLEEP. Using X11 DPMS Standby."
-      DISPLAY=:0 xset dpms force standby
+      echo "$(date): Dashboard requested SLEEP. Using X11 DPMS Off."
+      DISPLAY=:0 xset dpms force off
     elif [ "$STATE" = "wake" ]; then
-      echo "$(date): Dashboard requested WAKE. Waking and forcing HDMI handshake."
+      echo "$(date): Dashboard requested WAKE. Using X11 DPMS On."
       DISPLAY=:0 xset dpms force on
-      DISPLAY=:0 xrandr --auto
     fi
     LAST_STATE=$STATE
   fi
