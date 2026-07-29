@@ -97,6 +97,18 @@ watch(themePreference, (newVal) => {
     updateTheme()
 })
 
+const themeColor = ref(localStorage.getItem('themeColor') || '#14b8a6')
+const updateThemeColor = () => {
+    const root = document.documentElement
+    root.style.setProperty('--primary', themeColor.value)
+    root.style.setProperty('--ring', themeColor.value)
+    root.style.setProperty('--sidebar-primary', themeColor.value)
+}
+watch(themeColor, (newVal) => {
+    localStorage.setItem('themeColor', newVal)
+    updateThemeColor()
+})
+
 const defaultRadarLayers = ref(JSON.parse(localStorage.getItem('defaultRadarLayers') || 'null') || {
     precipitation: true,
     warnings: false,
@@ -143,11 +155,14 @@ const applyCursorSetting = () => {
 watch(developerSettings, (newVal) => {
     localStorage.setItem('developerSettings', JSON.stringify(newVal))
     fetchWeather(true) // Refresh weather when developer settings change
+    updateTheme()
+    updateThemeColor()
     applyCursorSetting()
 }, { deep: true })
 
 onMounted(() => {
     applyCursorSetting()
+    updateThemeColor()
 })
 
 watch(weatherData, updateTheme, { deep: true })
@@ -547,6 +562,7 @@ const handleCycleLayout = (workspace) => {
             v-model:localTimezone="localTimezone"
             v-model:timeOffset="timeOffset"
             v-model:themePreference="themePreference"
+            v-model:themeColor="themeColor"
             v-model:defaultRadarLayers="defaultRadarLayers"
             v-model:developerSettings="developerSettings"
             v-model:isEditingLayouts="isEditingLayouts"

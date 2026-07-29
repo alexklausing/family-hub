@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
-import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid } from 'lucide-vue-next'
+import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid, Palette } from 'lucide-vue-next'
 
 const props = defineProps({
     open: {
@@ -30,6 +30,10 @@ const props = defineProps({
         required: true,
     },
     themePreference: {
+        type: String,
+        required: true,
+    },
+    themeColor: {
         type: String,
         required: true,
     },
@@ -61,6 +65,7 @@ const emit = defineEmits([
     'update:localTimezone',
     'update:timeOffset',
     'update:themePreference',
+    'update:themeColor',
     'update:defaultRadarLayers',
     'update:developerSettings',
     'update:isEditingLayouts',
@@ -90,6 +95,11 @@ const tOffset = computed({
 const theme = computed({
     get: () => props.themePreference,
     set: (val) => emit('update:themePreference', val),
+})
+
+const colorTheme = computed({
+    get: () => props.themeColor,
+    set: (val) => emit('update:themeColor', val),
 })
 
 const defaultLayers = computed({
@@ -130,6 +140,21 @@ const sleepNow = () => {
 }
 
 const activeTab = ref('general')
+
+const presetColors = [
+    '#14B8A6', // Default Teal
+    '#D81E5B',
+    '#F26D69',
+    '#68818D',
+    '#7CB69B',
+    '#44DAA3',
+    '#A8F9FF',
+    '#407899',
+    '#41D3BD',
+    '#DE6449',
+    '#7C3AED',
+    '#F59E0B'
+]
 
 import axios from 'axios'
 
@@ -306,6 +331,39 @@ const refreshKiosk = async () => {
                                 >
                                     <Moon class="w-4 h-4" /> Dark
                                 </button>
+                            </div>
+                            
+                            <div class="mt-8 pt-8 border-t border-white/5">
+                                <div class="mb-6 flex items-center gap-5">
+                                    <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                        <Palette class="h-8 w-8" />
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xl font-black tracking-tight">Accent Color</h4>
+                                        <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Personalize your dashboard</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-6 gap-3 mb-4">
+                                    <button 
+                                        v-for="color in presetColors"
+                                        :key="color"
+                                        @click="colorTheme = color" 
+                                        class="h-10 rounded-full flex items-center justify-center transition-all"
+                                        :style="{ backgroundColor: color, '--tw-ring-color': color }"
+                                        :class="colorTheme === color ? 'ring-4 ring-offset-2 ring-offset-background scale-110' : 'opacity-80 hover:opacity-100 hover:scale-110'"
+                                    ></button>
+                                </div>
+                                <div class="flex items-center gap-4 bg-black/5 dark:bg-white/5 p-3 rounded-2xl">
+                                    <div class="flex flex-col gap-1 flex-1">
+                                        <label class="text-xs font-bold uppercase tracking-widest opacity-60">Custom Accent</label>
+                                        <span class="text-sm font-black">{{ colorTheme.toUpperCase() }}</span>
+                                    </div>
+                                    <input 
+                                        type="color" 
+                                        v-model="colorTheme"
+                                        class="h-12 w-20 cursor-pointer rounded-xl bg-transparent p-0 border-0 outline-none"
+                                    />
+                                </div>
                             </div>
                         </div>
 

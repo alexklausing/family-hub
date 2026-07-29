@@ -1212,7 +1212,7 @@ watch(
         </div>
 
         <!-- Chores Board (Kanban-style columns) -->
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-2 lg:px-4 pt-4 pb-12 -mx-2 lg:-mx-4">
             <div v-if="isLoading" class="flex h-40 items-center justify-center">
                 <div
                     class="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"

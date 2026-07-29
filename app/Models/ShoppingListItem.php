@@ -11,6 +11,11 @@ class ShoppingListItem extends Model
 {
     use HasFactory;
 
+    public function recipe()
+    {
+        return $this->belongsTo(Recipe::class, 'recipe_uuid', 'uuid');
+    }
+
     protected function casts(): array
     {
         return [

@@ -21,11 +21,20 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog'
 import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet'
+import {
     Search,
     RefreshCw,
     ChefHat,
     Utensils,
     ShoppingCart,
+    ShoppingBasket,
     Check,
     ArrowLeft,
     Clock,
@@ -37,6 +46,11 @@ import {
     ZoomIn,
     ZoomOut,
     Scale,
+    CalendarDays,
+    LayoutGrid,
+    List,
+    Filter,
+    Star,
 } from 'lucide-vue-next'
 
 const recipes = ref([])
@@ -45,9 +59,28 @@ const activeCategory = ref('')
 const searchQuery = ref('')
 const isLoading = ref(false)
 const isSyncing = ref(false)
+const quickAddLoading = ref({})
 const error = ref(null)
 const pagination = ref({ current_page: 1, last_page: 1 })
+const isFilterSheetOpen = ref(false)
 const continuousScroll = inject('continuousRecipeScroll', ref(false))
+
+// Favorites
+const favoriteCategories = ref(JSON.parse(localStorage.getItem('favoriteCategories') || '[]'))
+watch(favoriteCategories, (newVal) => {
+    localStorage.setItem('favoriteCategories', JSON.stringify(newVal))
+}, { deep: true })
+const toggleFavoriteCategory = (cat) => {
+    const index = favoriteCategories.value.indexOf(cat)
+    if (index > -1) {
+        favoriteCategories.value.splice(index, 1)
+    } else {
+        favoriteCategories.value.push(cat)
+    }
+}
+
+const pinnedCategories = computed(() => categories.value.filter(c => favoriteCategories.value.includes(c)))
+const unpinnedCategories = computed(() => categories.value.filter(c => !favoriteCategories.value.includes(c)))
 
 // Plan Meal State
 const planDialogRecipe = ref(null)
@@ -60,6 +93,10 @@ const isPlanning = ref(false)
 // View States
 const showClearMenuConfirm = ref(false)
 const viewMode = ref('recipes') // 'recipes' or 'menu'
+const listLayoutMode = ref(localStorage.getItem('recipeListLayout') || 'grid')
+watch(listLayoutMode, (newVal) => {
+    localStorage.setItem('recipeListLayout', newVal)
+})
 const menuPlans = ref([])
 const isLoadingMenu = ref(false)
 
@@ -322,8 +359,27 @@ const openPlanDialog = (recipe) => {
     planDialogRecipe.value = recipe
 }
 
+const addQuickToShoppingList = async (recipe) => {
+    quickAddLoading.value[recipe.id] = true
+    try {
+        await axios.post('/api/shopping-list/add-recipe', {
+            recipe_uuid: recipe.uuid,
+            scale: 1.0
+        })
+        // Feedback could be added here
+    } catch (e) {
+        console.error('Failed to add to shopping list', e)
+    } finally {
+        // Show success checkmark briefly? Just clear loading for now
+        setTimeout(() => {
+            quickAddLoading.value[recipe.id] = false
+        }, 500)
+    }
+}
+
 const closePlanDialog = () => {
     planDialogRecipe.value = null
+    isPlanDialogOpen.value = false
 }
 
 const submitPlan = async () => {
@@ -366,6 +422,9 @@ const handleSearch = () => {
 
 const selectCategory = (cat) => {
     activeCategory.value = activeCategory.value === cat ? '' : cat
+    setTimeout(() => {
+        isFilterSheetOpen.value = false
+    }, 350) // Small delay so the user sees the button highlight before it slides away
     fetchRecipes(1)
 }
 
@@ -404,14 +463,26 @@ watch(continuousScroll, (newVal) => {
         <!-- 1. Recipe Browser (Grid) -->
         <div
             v-if="!selectedRecipe"
-            class="flex h-full min-h-0 flex-col gap-8 p-2"
+            class="flex h-full min-h-0 flex-col gap-4 p-2 lg:p-4"
         >
             <!-- Main Toolbar -->
-            <div class="flex shrink-0 flex-col items-center justify-between gap-6 xl:flex-row pb-2">
+            <div class="flex shrink-0 flex-col items-center justify-between gap-6 xl:flex-row pb-4">
                 <!-- Navigation Tabs -->
-                <div class="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar shrink-0">
-                    <Button :variant="viewMode === 'recipes' ? 'default' : 'ghost'" @click="viewMode = 'recipes'" class="rounded-2xl text-lg font-black px-8 h-14 shadow-lg transition-all border border-transparent" :class="viewMode === 'recipes' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 border-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5'">Library</Button>
-                    <Button :variant="viewMode === 'menu' ? 'default' : 'ghost'" @click="viewMode = 'menu'" class="rounded-2xl text-lg font-black px-8 h-14 shadow-lg transition-all border border-transparent" :class="viewMode === 'menu' ? 'bg-primary text-white shadow-primary/20' : 'bg-white/40 border-white/20 backdrop-blur-xl dark:border-white/10 dark:bg-white/5'">Weekly Menu</Button>
+                <div class="flex items-center gap-2 p-1.5 bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-[2rem] shadow-lg shrink-0">
+                    <button 
+                        @click="viewMode = 'recipes'" 
+                        class="rounded-[1.5rem] text-lg font-black px-8 h-12 transition-all flex items-center justify-center"
+                        :class="viewMode === 'recipes' ? 'bg-primary text-white shadow-md' : 'text-foreground/60 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'"
+                    >
+                        Library
+                    </button>
+                    <button 
+                        @click="viewMode = 'menu'" 
+                        class="rounded-[1.5rem] text-lg font-black px-8 h-12 transition-all flex items-center justify-center"
+                        :class="viewMode === 'menu' ? 'bg-primary text-white shadow-md' : 'text-foreground/60 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10'"
+                    >
+                        Weekly Menu
+                    </button>
                 </div>
 
                 <!-- Tools (Library Mode) -->
@@ -419,15 +490,100 @@ watch(continuousScroll, (newVal) => {
                     <!-- Search -->
                     <div class="relative w-full md:max-w-xs lg:max-w-md shrink-0">
                         <Search class="text-muted-foreground absolute top-1/2 left-4 h-6 w-6 -translate-y-1/2 opacity-50" />
-                        <Input v-model="searchQuery" placeholder="Search library..." class="focus:ring-primary/20 h-14 rounded-2xl border-white/20 bg-white/40 pl-12 text-xl shadow-lg backdrop-blur-xl transition-all dark:border-white/10 dark:bg-white/5" />
+                        <Input v-model="searchQuery" placeholder="Search library..." class="focus:ring-primary h-14 rounded-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 pl-12 text-xl shadow-inner backdrop-blur-xl transition-all hover:bg-black/10 dark:hover:bg-white/10 focus:bg-white dark:focus:bg-black" />
                     </div>
 
-                    <!-- Categories -->
-                    <div class="no-scrollbar flex w-full items-center gap-3 overflow-x-auto md:w-auto">
-                        <Button v-for="cat in categories" :key="cat" :variant="activeCategory === cat ? 'default' : 'ghost'" class="h-14 rounded-2xl border border-transparent px-6 text-sm font-black tracking-widest whitespace-nowrap uppercase shadow-sm transition-all shrink-0" :class="activeCategory === cat ? 'bg-primary shadow-primary/20 text-white' : 'border-white/20 bg-white/40 backdrop-blur-xl hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10'" @click="selectCategory(cat)">
-                            {{ cat }}
+                    <!-- View Toggle -->
+                    <div class="flex items-center gap-1 rounded-[1.25rem] bg-black/5 p-1 backdrop-blur-xl dark:bg-white/5 border border-black/10 dark:border-white/10 shrink-0 shadow-inner">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            class="h-12 w-12 rounded-xl transition-all"
+                            :class="listLayoutMode === 'grid' ? 'bg-white shadow-sm dark:bg-[#333]' : 'opacity-50 hover:opacity-100 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10'"
+                            @click="listLayoutMode = 'grid'"
+                        >
+                            <LayoutGrid class="w-5 h-5" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            class="h-12 w-12 rounded-xl transition-all"
+                            :class="listLayoutMode === 'list' ? 'bg-white shadow-sm dark:bg-[#333]' : 'opacity-50 hover:opacity-100 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10'"
+                            @click="listLayoutMode = 'list'"
+                        >
+                            <List class="w-5 h-5" />
                         </Button>
                     </div>
+
+                    <!-- Categories Sheet -->
+                    <Sheet v-model:open="isFilterSheetOpen">
+                        <SheetTrigger as-child>
+                            <Button 
+                                variant="outline" 
+                                class="h-14 rounded-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-8 text-sm font-black tracking-widest uppercase shadow-sm backdrop-blur-xl transition-all hover:bg-black/10 dark:hover:bg-white/10 shrink-0"
+                                :class="activeCategory ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''"
+                            >
+                                <Filter class="w-5 h-5 mr-3" />
+                                {{ activeCategory || 'Filter Categories' }}
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" class="w-[400px] sm:w-[540px] bg-white/80 dark:bg-black/80 backdrop-blur-3xl border-r-white/20 dark:border-r-white/10 flex flex-col p-8">
+                            <SheetHeader class="mb-8">
+                                <SheetTitle class="text-4xl font-black tracking-tight">Categories</SheetTitle>
+                                <SheetDescription class="text-lg">
+                                    Select a category to filter your recipe library.
+                                </SheetDescription>
+                            </SheetHeader>
+                            <div class="flex-1 overflow-y-auto custom-scrollbar no-scrollbar pr-4 -mr-4">
+                                <div class="flex flex-col gap-6 pb-6">
+                                    <div class="flex flex-col gap-3">
+                                        <Button 
+                                            variant="outline"
+                                            class="h-auto min-h-16 w-full justify-start rounded-2xl border-white/20 bg-white/40 px-6 py-4 text-left font-black tracking-widest uppercase whitespace-normal transition-all hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                                            :class="!activeCategory ? 'bg-primary text-primary-foreground shadow-primary/20 shadow-lg border-transparent hover:bg-primary/90' : ''"
+                                            @click="selectCategory('')"
+                                        >
+                                            All Recipes
+                                        </Button>
+                                    </div>
+                                    
+                                    <div v-if="pinnedCategories.length" class="flex flex-col gap-3">
+                                        <h4 class="text-xs font-black tracking-widest text-muted-foreground uppercase px-2 mb-1">Favorites</h4>
+                                        <Button 
+                                            v-for="cat in pinnedCategories" 
+                                            :key="`pinned-${cat}`" 
+                                            variant="outline"
+                                            class="group relative h-auto min-h-16 w-full justify-between rounded-2xl border-white/20 bg-white/40 px-6 py-4 text-left font-black tracking-widest uppercase whitespace-normal transition-all hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                                            :class="activeCategory === cat ? 'bg-primary text-primary-foreground shadow-primary/20 shadow-lg border-transparent hover:bg-primary/90' : ''"
+                                            @click="selectCategory(cat)"
+                                        >
+                                            <span class="mr-10">{{ cat }}</span>
+                                            <div @click.stop="toggleFavoriteCategory(cat)" class="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-yellow-500 hover:scale-125 transition-transform cursor-pointer">
+                                                <Star class="w-6 h-6 fill-current" />
+                                            </div>
+                                        </Button>
+                                    </div>
+
+                                    <div class="flex flex-col gap-3">
+                                        <h4 v-if="pinnedCategories.length" class="text-xs font-black tracking-widest text-muted-foreground uppercase px-2 mb-1">All Categories</h4>
+                                        <Button 
+                                            v-for="cat in unpinnedCategories" 
+                                            :key="`unpinned-${cat}`" 
+                                            variant="outline"
+                                            class="group relative h-auto min-h-16 w-full justify-between rounded-2xl border-white/20 bg-white/40 px-6 py-4 text-left font-black tracking-widest uppercase whitespace-normal transition-all hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                                            :class="activeCategory === cat ? 'bg-primary text-primary-foreground shadow-primary/20 shadow-lg border-transparent hover:bg-primary/90' : ''"
+                                            @click="selectCategory(cat)"
+                                        >
+                                            <span class="mr-10">{{ cat }}</span>
+                                            <div @click.stop="toggleFavoriteCategory(cat)" class="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-muted-foreground/30 hover:text-yellow-500 hover:scale-125 transition-all cursor-pointer">
+                                                <Star class="w-6 h-6" />
+                                            </div>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
 
                     <!-- Sync -->
                     <Button variant="ghost" size="icon" class="h-14 w-14 shrink-0 rounded-2xl border border-white/20 bg-white/40 shadow-xl backdrop-blur-xl hover:bg-white/60 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10" @click="fetchRecipes(1, true)" :disabled="isSyncing">
@@ -437,7 +593,7 @@ watch(continuousScroll, (newVal) => {
             </div>
 
             <!-- Menu View -->
-            <div v-if="viewMode === 'menu'" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+            <div v-if="viewMode === 'menu'" class="flex-1 overflow-y-auto custom-scrollbar px-2 lg:px-4 pt-4 pb-12 -mx-2 lg:-mx-4">
                 <div v-if="isLoadingMenu" class="flex flex-1 items-center justify-center h-full">
                     <div class="flex flex-col items-center gap-6">
                         <RefreshCw class="text-primary h-16 w-16 animate-spin" />
@@ -555,10 +711,10 @@ watch(continuousScroll, (newVal) => {
 
             <div
                 v-else
-                class="custom-scrollbar min-h-0 flex-1 overflow-y-auto pr-2"
+                class="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-2 lg:px-4 pt-4 pb-12 -mx-2 lg:-mx-4"
                 @scroll="handleScroll"
             >
-                <div
+                <div v-if="listLayoutMode === 'grid'"
                     class="grid grid-cols-1 gap-8 pb-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 >
                     <Card
@@ -599,16 +755,87 @@ watch(continuousScroll, (newVal) => {
                                 {{ recipe.title }}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent class="p-6 pt-0">
+                        <CardContent class="p-6 pt-0 flex gap-3">
                             <Button
                                 variant="secondary"
-                                class="bg-primary/5 hover:bg-primary border-primary/10 h-12 w-full rounded-2xl border-2 font-black tracking-widest uppercase transition-all hover:text-white"
+                                class="bg-primary/5 hover:bg-primary border-primary/10 h-12 flex-1 rounded-2xl border-2 transition-all hover:text-white"
                                 @click.stop="openPlanDialog(recipe)"
                             >
-                                <Utensils class="mr-2 h-5 w-5" />
-                                Plan Meal
+                                <ChefHat class="h-5 w-5" />
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                class="bg-primary/5 hover:bg-primary border-primary/10 h-12 flex-1 rounded-2xl border-2 transition-all hover:text-white"
+                                :disabled="quickAddLoading[recipe.id]"
+                                @click.stop="addQuickToShoppingList(recipe)"
+                            >
+                                <RefreshCw v-if="quickAddLoading[recipe.id]" class="h-5 w-5 animate-spin" />
+                                <ShoppingBasket v-else class="h-5 w-5" />
                             </Button>
                         </CardContent>
+                    </Card>
+                </div>
+                
+                <div v-else
+                    class="flex flex-col gap-4 pb-12"
+                >
+                    <Card
+                        v-for="recipe in recipes"
+                        :key="`list-${recipe.id}`"
+                        class="group flex flex-row !p-0 !gap-0 cursor-pointer overflow-hidden rounded-[2rem] border-none bg-white/60 shadow-xl backdrop-blur-3xl transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl dark:bg-white/5 h-32"
+                        @click="openDetails(recipe)"
+                    >
+                        <div class="bg-muted relative h-full w-40 shrink-0 overflow-hidden rounded-l-[2rem]">
+                            <img
+                                v-if="recipe.image_url"
+                                :src="recipe.image_url"
+                                :alt="recipe.title"
+                                class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            />
+                            <div v-else class="flex h-full items-center justify-center">
+                                <Utensils class="text-muted-foreground/20 h-10 w-10" />
+                            </div>
+                        </div>
+                        <div class="flex flex-1 items-center justify-between p-4 px-6 min-w-0">
+                            <div class="flex flex-col justify-center flex-1 min-w-0 mr-4 h-full">
+                                <div class="flex gap-2 items-center mb-1 overflow-x-auto no-scrollbar">
+                                    <div v-if="recipe.category" class="flex gap-1 shrink-0">
+                                        <span v-for="cat in recipe.category.split(', ')" :key="cat" class="bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase text-foreground/70 whitespace-nowrap">
+                                            {{ cat }}
+                                        </span>
+                                    </div>
+                                    <div v-if="recipe.rating > 0" class="flex items-center text-yellow-500 gap-0.5 shrink-0">
+                                        <svg v-for="i in recipe.rating" :key="`star-${i}`" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-star"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                    </div>
+                                </div>
+                                <h3 class="group-hover:text-primary truncate text-xl font-black tracking-tight transition-colors mb-2">
+                                    {{ recipe.title }}
+                                </h3>
+                                <div class="flex items-center gap-4 text-xs font-bold text-muted-foreground/80 uppercase tracking-wider">
+                                    <span v-if="recipe.total_time" class="flex items-center gap-1"><Clock class="w-3.5 h-3.5"/> {{ recipe.total_time }}</span>
+                                    <span v-else-if="recipe.cook_time" class="flex items-center gap-1"><Utensils class="w-3.5 h-3.5"/> {{ recipe.cook_time }}</span>
+                                    <span v-else class="flex items-center gap-1 opacity-50"><Clock class="w-3.5 h-3.5"/> -</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    class="bg-primary/5 hover:bg-primary border-primary/10 h-14 w-14 shrink-0 rounded-2xl border-2 transition-all hover:text-white shadow-sm p-0 flex items-center justify-center"
+                                    @click.stop="openPlanDialog(recipe)"
+                                >
+                                    <ChefHat class="h-5 w-5" />
+                                </Button>
+                                <Button
+                                    variant="secondary"
+                                    class="bg-primary/5 hover:bg-primary border-primary/10 h-14 w-14 shrink-0 rounded-2xl border-2 transition-all hover:text-white shadow-sm p-0 flex items-center justify-center"
+                                    :disabled="quickAddLoading[recipe.id]"
+                                    @click.stop="addQuickToShoppingList(recipe)"
+                                >
+                                    <RefreshCw v-if="quickAddLoading[recipe.id]" class="h-5 w-5 animate-spin" />
+                                    <ShoppingBasket v-else class="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
                     </Card>
                 </div>
 
@@ -796,7 +1023,7 @@ watch(continuousScroll, (newVal) => {
                         @click="openPlanDialog(selectedRecipe)"
                     >
                         <Utensils class="mr-3 h-5 w-5" />
-                        Plan Meal
+                        
                     </Button>
                     <Button
                         variant="outline"
@@ -961,7 +1188,7 @@ watch(continuousScroll, (newVal) => {
         <Dialog :open="!!planDialogRecipe" @update:open="closePlanDialog">
             <DialogContent class="sm:max-w-[425px] rounded-[2rem] p-6 border-white/20 bg-white/90 backdrop-blur-3xl dark:bg-[#050505]/90">
                 <DialogHeader>
-                    <DialogTitle class="text-2xl font-black tracking-tighter">Plan Meal</DialogTitle>
+                    <DialogTitle class="text-2xl font-black tracking-tighter"></DialogTitle>
                 </DialogHeader>
                 <div v-if="planDialogRecipe" class="grid gap-6 py-4">
                     <p class="font-bold text-lg text-primary">{{ planDialogRecipe.title }}</p>
@@ -986,9 +1213,27 @@ watch(continuousScroll, (newVal) => {
                         <Switch id="plan-menu" :checked="planToMenu" @update:checked="planToMenu = $event" />
                     </div>
 
-                    <div class="flex items-center justify-between bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
-                        <Label for="plan-shopping" class="text-sm font-bold cursor-pointer">Add to Shopping List</Label>
-                        <Switch id="plan-shopping" :checked="planToList" @update:checked="planToList = $event" />
+                    <div class="flex flex-col gap-4 bg-white/40 dark:bg-white/5 p-4 rounded-xl border border-white/20">
+                        <div class="flex items-center justify-between">
+                            <Label for="plan-shopping" class="text-sm font-bold cursor-pointer">Add to Shopping List</Label>
+                            <Switch id="plan-shopping" :checked="planToList" @update:checked="planToList = $event" />
+                        </div>
+                        <div v-if="planToList" class="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
+                            <Label class="text-sm font-bold opacity-70">Scale Recipe</Label>
+                            <div class="flex items-center gap-1 bg-black/5 dark:bg-white/5 rounded-lg p-1">
+                                <Button
+                                    v-for="opt in scaleOptions"
+                                    :key="'plan-scale-'+opt"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="h-7 px-3 text-xs font-black rounded-md transition-all"
+                                    :class="scaleFactor === opt ? 'bg-primary text-white shadow-sm' : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10'"
+                                    @click="scaleFactor = opt"
+                                >
+                                    {{ opt }}x
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <DialogFooter>

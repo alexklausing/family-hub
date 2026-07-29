@@ -401,6 +401,28 @@ class PaprikaSyncService
     }
 
     /**
+     * Delete a single item from the shopping list
+     */
+    public function deleteItem(string $uuid): bool
+    {
+        if (! $this->token && ! $this->login()) {
+            return false;
+        }
+
+        $item = ShoppingListItem::where('uuid', $uuid)->first();
+        if (! $item) {
+            return true;
+        }
+
+        if ($this->postSyncData('groceries', [['uid' => $uuid, 'deleted' => 1]])) {
+            $item->delete();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Clear all items from the shopping list
      */
     public function clearShoppingList(): bool
@@ -513,6 +535,10 @@ class PaprikaSyncService
                 'ingredients' => $data['ingredients'] ?? null,
                 'directions' => $data['directions'] ?? null,
                 'category' => $categoryString,
+                'prep_time' => $data['prep_time'] ?? null,
+                'cook_time' => $data['cook_time'] ?? null,
+                'total_time' => $data['total_time'] ?? null,
+                'rating' => $data['rating'] ?? 0,
                 'image_url' => $this->cacheImage($uuid, $data['image_url'] ?? null),
             ]
         );

@@ -46,6 +46,7 @@ Route::post('/api/recipes/{recipe:uuid}/plan', [RecipeController::class, 'plan']
 Route::get('/api/shopping-list', [ShoppingListController::class, 'index']);
 Route::post('/api/shopping-list', [ShoppingListController::class, 'store']);
 Route::delete('/api/shopping-list', [ShoppingListController::class, 'destroyAll']);
+Route::delete('/api/shopping-list/{item}', [ShoppingListController::class, 'destroy']);
 Route::post('/api/shopping-list/{item}/toggle', [ShoppingListController::class, 'toggle']);
 Route::post('/api/shopping-list/add-recipe', [ShoppingListController::class, 'addRecipe']);
 
@@ -108,10 +109,14 @@ Route::post('/api/monitor/state', function (\Illuminate\Http\Request $request) {
     return response()->json(['message' => 'State updated']);
 });
 
-// Auto-patch Vite public/hot for Kiosk and Remote Mac access
+// Auto-patch Vite public/hot for Kiosk and Remote Mac access based on APP_URL
 if (file_exists(public_path('hot'))) {
     $hotContent = file_get_contents(public_path('hot'));
-    if (strpos($hotContent, '127.0.0.1') !== false) {
-        file_put_contents(public_path('hot'), str_replace('127.0.0.1', '192.168.4.140', $hotContent));
+    $appUrl = config('app.url');
+    $host = parse_url($appUrl, PHP_URL_HOST) ?? 'localhost';
+    
+    $newHotContent = preg_replace('/(localhost|127\.0\.0\.1)/', $host, $hotContent);
+    if ($newHotContent !== $hotContent) {
+        file_put_contents(public_path('hot'), $newHotContent);
     }
 }

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div style="width: 200px; height: 50px; background: red; overflow: hidden; position: relative;">
+  <div id="fg" style="position: absolute; inset: 0; background: blue; transition: transform 0.1s;"></div>
+</div>
+<script>
+  const fg = document.getElementById('fg');
+  fg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    console.log(e.deltaX);
+  });
+</script>
+</body>
+</html>

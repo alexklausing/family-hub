@@ -6,7 +6,17 @@ import path from 'path'
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '')
-    const hmrHost = env.VITE_HMR_HOST || 'localhost'
+    
+    let hmrHost = 'localhost'
+    if (env.APP_URL) {
+        try {
+            hmrHost = new URL(env.APP_URL).hostname
+        } catch (e) {
+            // Fallback to localhost if APP_URL is invalid
+        }
+    }
+    // Allow explicit override if still needed
+    hmrHost = env.VITE_HMR_HOST || hmrHost
 
     return {
         plugins: [

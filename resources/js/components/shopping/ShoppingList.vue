@@ -1,17 +1,19 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import {
     ShoppingCart,
     Plus,
     RefreshCw,
     Eraser,
     PackageCheck,
+    Trash2,
 } from 'lucide-vue-next'
 import {
     Dialog,
@@ -59,15 +61,25 @@ const addItem = async () => {
     }
 }
 
-const toggleItem = async (item) => {
+const toggleItem = async (itemGroup) => {
+    // If it's grouped, we toggle all items to match the new state
+    const newPurchasedState = !itemGroup.purchased
+    itemGroup.purchased = newPurchasedState // Optimistic UI update
+
     try {
-        await axios.post(`/api/shopping-list/${item.id}/toggle`, {
-            purchased: !item.purchased,
+        const promises = itemGroup.originalItems.map(item => {
+            if (item.purchased !== newPurchasedState) {
+                item.purchased = newPurchasedState
+                return axios.post(`/api/shopping-list/${item.id}/toggle`, {
+                    purchased: newPurchasedState,
+                })
+            }
+            return Promise.resolve()
         })
-        item.purchased = !item.purchased
+        await Promise.all(promises)
     } catch (error) {
         console.error('Failed to toggle item:', error)
-        item.purchased = !item.purchased
+        fetchItems() // Revert UI
     }
 }
 
@@ -81,6 +93,110 @@ const clearList = async () => {
         console.error('Failed to clear list:', error)
         isLoading.value = false
     }
+}
+
+const deleteSingleItem = async (itemGroup) => {
+    try {
+        const promises = itemGroup.originalItems.map(item => 
+            axios.delete(`/api/shopping-list/${item.id}`)
+        )
+        await Promise.all(promises)
+        fetchItems()
+    } catch (error) {
+        console.error('Failed to delete item:', error)
+    }
+}
+
+// Gesture State
+const swipeState = ref({})
+
+// Computed Grouping
+const processedCategories = computed(() => {
+    const result = {}
+    for (const [category, categoryItems] of Object.entries(categories.value)) {
+        const grouped = {}
+        for (const item of categoryItems) {
+            const key = (item.name || '').toLowerCase().trim()
+            if (!grouped[key]) {
+                grouped[key] = {
+                    id: `group-${item.id}`,
+                    name: item.name,
+                    quantities: item.quantity ? [item.quantity] : [],
+                    originalItems: [item],
+                    purchased: item.purchased,
+                    recipes: item.recipe ? [item.recipe] : [],
+                }
+            } else {
+                grouped[key].originalItems.push(item)
+                if (item.quantity && !grouped[key].quantities.includes(item.quantity)) {
+                    grouped[key].quantities.push(item.quantity)
+                }
+                if (item.recipe && !grouped[key].recipes.find(r => r.id === item.recipe.id)) {
+                    grouped[key].recipes.push(item.recipe)
+                }
+                grouped[key].purchased = grouped[key].purchased && item.purchased
+            }
+        }
+        result[category] = Object.values(grouped).map(group => {
+            group.displayQuantity = group.quantities.length > 0 ? group.quantities.join(' + ') : ''
+            return group
+        })
+    }
+    return result
+})
+
+// Touch Handlers
+const handleTouchStart = (e, item) => {
+    if (!swipeState.value[item.id]) {
+        swipeState.value[item.id] = { startX: 0, currentX: 0, isOpen: false, isSwiping: false, wasDragged: false }
+    }
+    const state = swipeState.value[item.id]
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    state.startX = clientX
+    state.isSwiping = true
+    state.wasDragged = false
+}
+
+const handleTouchMove = (e, item) => {
+    const state = swipeState.value[item.id]
+    if (!state?.isSwiping) return
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const diff = clientX - state.startX
+    
+    if (Math.abs(diff) > 10) {
+        state.wasDragged = true
+    }
+    
+    let newX = state.isOpen ? diff - 80 : diff
+    if (newX > 0) newX = 0
+    if (newX < -100) newX = -100
+    
+    state.currentX = newX
+}
+
+const handleTouchEnd = (e, item) => {
+    const state = swipeState.value[item.id]
+    if (!state?.isSwiping) return
+    state.isSwiping = false
+    
+    if (state.currentX < -40) {
+        state.isOpen = true
+        state.currentX = -80
+    } else {
+        state.isOpen = false
+        state.currentX = 0
+    }
+}
+
+const handleItemClick = (item) => {
+    const state = swipeState.value[item.id]
+    if (state?.wasDragged) return
+    if (state?.isOpen) {
+        state.isOpen = false
+        state.currentX = 0
+        return
+    }
+    toggleItem(item)
 }
 
 onMounted(() => {
@@ -150,7 +266,7 @@ onMounted(() => {
         <div v-else class="custom-scrollbar flex-1 overflow-y-auto pr-6 pb-10">
             <div class="grid grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-3">
                 <div
-                    v-for="(items, category) in categories"
+                    v-for="(items, category) in processedCategories"
                     :key="category"
                     class="space-y-6"
                 >
@@ -171,41 +287,56 @@ onMounted(() => {
                         <div
                             v-for="item in items"
                             :key="item.id"
-                            class="group flex items-center space-x-5 rounded-[2rem] border-none p-6 shadow-md"
+                            class="group relative overflow-hidden rounded-3xl border border-black/10 border-t-black/20 dark:border-white/10 dark:border-t-white/20 bg-destructive/90 shadow-sm"
                             :class="{
-                                'scale-95 opacity-40 grayscale': item.purchased,
+                                'opacity-50 grayscale': item.purchased,
                             }"
-                            @click="toggleItem(item)"
                         >
-                            <Checkbox
-                                :id="'item-' + item.id"
-                                :checked="item.purchased"
-                                @update:checked="toggleItem(item)"
-                                class="h-8 w-8 rounded-xl border-2 transition-transform active:scale-75"
-                                @click.stop
-                            />
-                            <div class="min-w-0 flex-1">
-                                <Label
-                                    :for="'item-' + item.id"
-                                    class="block cursor-pointer truncate text-2xl font-black transition-all select-none"
-                                    :class="{
-                                        'line-through opacity-50':
-                                            item.purchased,
-                                    }"
-                                >
-                                    {{ item.name }}
-                                </Label>
-                                <p
-                                    v-if="item.quantity"
-                                    class="text-muted-foreground mt-1 text-sm font-bold tracking-widest uppercase"
-                                >
-                                    {{ item.quantity }}
-                                </p>
+                            <!-- Background Delete Button -->
+                            <div class="absolute inset-y-0 right-0 w-[80px] flex items-center justify-center text-white cursor-pointer hover:bg-destructive transition-colors z-0" @click.stop="deleteSingleItem(item)">
+                                <Trash2 class="h-6 w-6" />
                             </div>
-                            <PackageCheck
-                                v-if="item.purchased"
-                                class="text-primary h-6 w-6 opacity-50"
-                            />
+
+                            <!-- Swipeable Foreground -->
+                            <div 
+                                class="relative z-10 flex items-center space-x-4 bg-[#f8f9fa] dark:bg-[#1a1a1a] p-4 cursor-pointer select-none [@media(hover:hover)]:group-hover:-translate-x-[80px]"
+                                :class="!swipeState[item.id]?.isSwiping ? 'duration-300 ease-out transition-transform' : ''"
+                                :style="swipeState[item.id]?.currentX ? { transform: `translateX(${swipeState[item.id].currentX}px)` } : {}"
+                                @touchstart="handleTouchStart($event, item)"
+                                @touchmove="handleTouchMove($event, item)"
+                                @touchend="handleTouchEnd($event, item)"
+                                @mousedown="handleTouchStart($event, item)"
+                                @mousemove="handleTouchMove($event, item)"
+                                @mouseup="handleTouchEnd($event, item)"
+                                @mouseleave="handleTouchEnd($event, item)"
+                                @dragstart.prevent
+                                @click="handleItemClick(item)"
+                            >
+                                <Checkbox
+                                    :id="`item-${item.id}`"
+                                    :checked="item.purchased"
+                                    @update:checked="handleItemClick(item)"
+                                    class="h-7 w-7 rounded-full border-2 transition-colors data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                />
+                                <div class="flex-1 flex flex-col justify-center min-w-0">
+                                    <Label
+                                        :for="`item-${item.id}`"
+                                        class="cursor-pointer text-lg leading-tight font-semibold tracking-tight select-none flex items-center flex-wrap gap-2 truncate w-full"
+                                        :class="{
+                                            'text-muted-foreground line-through':
+                                                item.purchased,
+                                        }"
+                                    >
+                                        {{ item.name }}
+                                        <Badge v-for="recipe in item.recipes" :key="recipe.id" variant="secondary" class="text-[10px] uppercase font-bold py-0 h-5 px-2 bg-primary/10 text-primary border-none">
+                                            {{ recipe.title }}
+                                        </Badge>
+                                    </Label>
+                                    <span v-if="item.displayQuantity" class="text-sm font-medium text-muted-foreground truncate w-full block mt-0.5">
+                                        {{ item.displayQuantity }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

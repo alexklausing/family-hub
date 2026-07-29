@@ -23,7 +23,7 @@ class ShoppingListController extends Controller
             }
         }
 
-        $items = ShoppingListItem::query()
+        $items = ShoppingListItem::with('recipe')
             ->orderBy('purchased')
             ->orderBy('aisle')
             ->orderBy('name')
@@ -80,6 +80,13 @@ class ShoppingListController extends Controller
     public function destroyAll()
     {
         $success = $this->paprikaService->clearShoppingList();
+
+        return response()->json(['success' => $success]);
+    }
+
+    public function destroy(ShoppingListItem $item)
+    {
+        $success = $this->paprikaService->deleteItem($item->uuid);
 
         return response()->json(['success' => $success]);
     }
