@@ -19,6 +19,7 @@ const onChange = (input) => {
 const onKeyPress = (button) => {
     if (button === '{shift}' || button === '{lock}') {
         handleShift()
+        return
     }
     if (button === '{enter}') {
         // Optional: trigger enter key
@@ -33,6 +34,11 @@ const onKeyPress = (button) => {
             currentInput.value.blur()
             currentInput.value = null
         }
+    }
+
+    // Auto-revert shift after a character is typed
+    if (keyboard.value && keyboard.value.options.layoutName === 'shift' && !button.includes('{')) {
+        handleShift()
     }
 }
 

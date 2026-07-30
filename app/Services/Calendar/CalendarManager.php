@@ -69,8 +69,8 @@ class CalendarManager
                     ],
                     [
                         'title' => $eventData['title'],
-                        'start' => Carbon::parse($eventData['start'])->setTimezone('UTC'),
-                        'end' => Carbon::parse($eventData['end'])->setTimezone('UTC'),
+                        'start' => Carbon::parse($eventData['start'])->setTimezone(config('app.timezone')),
+                        'end' => Carbon::parse($eventData['end'])->setTimezone(config('app.timezone')),
                         'all_day' => $eventData['all_day'] ?? false,
                         'data' => $eventData,
                     ]

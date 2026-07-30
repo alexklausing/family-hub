@@ -4,6 +4,9 @@ import axios from 'axios'
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import EmojiPicker from 'vue3-emoji-picker'
+import 'vue3-emoji-picker/css'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -66,6 +69,12 @@ const openEdit = (c) => {
         form.value.target_date = form.value.target_date.split('T')[0]
     }
     isDialogOpen.value = true
+}
+
+const isEmojiPickerOpen = ref(false)
+const onSelectEmoji = (emoji) => {
+    form.value.icon = emoji.i
+    isEmojiPickerOpen.value = false
 }
 
 const save = async () => {
@@ -147,7 +156,20 @@ const deleteCountdown = async (id) => {
                     </div>
                     <div class="grid gap-2">
                         <Label for="icon" class="font-bold">Icon (Emoji)</Label>
-                        <Input id="icon" v-model="form.icon" class="bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl" placeholder="🌟" />
+                        <Popover v-model:open="isEmojiPickerOpen">
+                            <PopoverTrigger as-child>
+                                <Button
+                                    variant="outline"
+                                    class="w-full justify-start text-left font-normal bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 rounded-xl h-10"
+                                >
+                                    <span class="text-xl mr-2">{{ form.icon || '🌟' }}</span>
+                                    <span>Select an emoji</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent class="w-auto p-0 border-none bg-transparent shadow-none" align="start">
+                                <EmojiPicker :native="true" @select="onSelectEmoji" class="light" />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
                 <DialogFooter>
