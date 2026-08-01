@@ -99,6 +99,9 @@ const speak = (text, langId) => {
     if (!window.speechSynthesis || voices.length === 0) {
         const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${langId}&client=tw-ob`
         const audio = new Audio(audioUrl)
+        // Google's translate_tts endpoint returns 404 when a Referer header is present.
+        // Browsers send Referer by default, so suppress it to keep the cloud TTS fallback working.
+        audio.referrerPolicy = 'no-referrer'
         audio.play().catch(e => console.error("Audio fallback failed:", e))
         return
     }
