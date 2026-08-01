@@ -100,7 +100,10 @@ const speak = (text, langId) => {
         const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${langId}&client=tw-ob`
         const audio = new Audio(audioUrl)
         // Google's translate_tts endpoint returns 404 when a Referer header is present.
-        // Browsers send Referer by default, so suppress it to keep the cloud TTS fallback working.
+        // Chromium does not honor element-level referrerPolicy for media loads, so the
+        // document-level <meta name="referrer" content="no-referrer"> in the page head
+        // is what actually strips the Referer. This property is kept as defense-in-depth
+        // for browsers that do honor it (Firefox/Safari).
         audio.referrerPolicy = 'no-referrer'
         audio.play().catch(e => console.error("Audio fallback failed:", e))
         return
