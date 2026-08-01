@@ -77,6 +77,13 @@ const onSelectEmoji = (emoji) => {
     isEmojiPickerOpen.value = false
 }
 
+const handleEmojiInteractOutside = (e) => {
+    const target = e.detail?.originalEvent?.target || e.target
+    if (target && target.closest && target.closest('.virtual-keyboard-wrapper')) {
+        e.preventDefault()
+    }
+}
+
 const save = async () => {
     try {
         if (dialogMode.value === 'add') {
@@ -166,7 +173,11 @@ const deleteCountdown = async (id) => {
                                     <span>Select an emoji</span>
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent class="w-auto p-0 border-none bg-transparent shadow-none" align="start">
+                            <PopoverContent 
+                                class="w-auto p-0 border-none bg-transparent shadow-none" 
+                                align="start"
+                                @interact-outside="handleEmojiInteractOutside"
+                            >
                                 <EmojiPicker :native="true" @select="onSelectEmoji" class="light" />
                             </PopoverContent>
                         </Popover>
