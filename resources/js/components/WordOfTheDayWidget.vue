@@ -93,16 +93,21 @@ const getVoiceLang = (langId) => {
 }
 
 const speak = (text, langId) => {
-    if (!window.speechSynthesis) return
+    // Chromium Snap on Ubuntu blocks speech-dispatcher. If no voices are found, fallback to cloud TTS.
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : []
+    
+    if (!window.speechSynthesis || voices.length === 0) {
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${langId}&client=tw-ob`
+        const audio = new Audio(audioUrl)
+        audio.play().catch(e => console.error("Audio fallback failed:", e))
+        return
+    }
 
     window.speechSynthesis.cancel()
 
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = getVoiceLang(langId)
     
-    // Some browsers load voices asynchronously, but setting lang usually picks the right default.
-    // We try to grab the best voice if already loaded.
-    const voices = window.speechSynthesis.getVoices()
     const targetLang = getVoiceLang(langId)
     const voice = voices.find(v => v.lang === targetLang || v.lang.startsWith(targetLang.split('-')[0]))
     if (voice) {

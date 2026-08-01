@@ -19,6 +19,18 @@ class CountdownSeeder extends Seeder
         ]);
 
         Countdown::create([
+            'title' => "Mommy's Birthday",
+            'target_date' => '2026-08-31',
+            'icon' => '🎂',
+        ]);
+
+        Countdown::create([
+            'title' => "First Day of School",
+            'target_date' => '2026-08-10',
+            'icon' => '🏫',
+        ]);
+
+        Countdown::create([
             'title' => "Norway Trip",
             'target_date' => '2026-11-21',
             'icon' => '🇳🇴',
