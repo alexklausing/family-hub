@@ -428,8 +428,8 @@ const handleCycleLayout = (workspace) => {
         </div>
 
         <!-- Full Screen Celebration Overlay -->
-        <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'celebrations'" class="fixed inset-0 z-[100] bg-black">
-            <button @click="activeTab = 'other'" class="absolute top-6 left-6 z-[110] p-4 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md transition-colors">
+        <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'celebrations'" class="fixed inset-0 z-40 bg-black">
+            <button @click="activeTab = 'other'" class="absolute top-6 left-6 z-50 p-4 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md transition-colors">
                 <X class="w-8 h-8" />
             </button>
             <CelebrationTab />

@@ -197,15 +197,15 @@ const deleteCelebration = async (id) => {
                             </span>
                         </div>
 
-                        <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100 bg-white/80 dark:bg-transparent rounded-full px-1 py-1">
-                            <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full bg-slate-200/50 hover:bg-slate-300 dark:bg-black/20 dark:hover:bg-black/40" :title="c.is_active ? 'Hide from hub' : 'Show on hub'" @click="setActive(c)">
+                        <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 bg-white/80 dark:bg-transparent rounded-full px-1 py-1 shadow-sm">
+                            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-slate-200/50 hover:bg-slate-300 dark:bg-black/20 dark:hover:bg-black/40" :title="c.is_active ? 'Hide from hub' : 'Show on hub'" @click="setActive(c)">
                                 <StarOff v-if="c.is_active" class="h-4 w-4 text-amber-500" />
                                 <Star v-else class="h-4 w-4 text-slate-600 dark:text-white/80" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full bg-slate-200/50 hover:bg-slate-300 dark:bg-black/20 dark:hover:bg-black/40" @click="openEdit(c)">
+                            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-slate-200/50 hover:bg-slate-300 dark:bg-black/20 dark:hover:bg-black/40" @click="openEdit(c)">
                                 <Pencil class="h-4 w-4 text-slate-700 dark:text-white/80" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 rounded-full bg-slate-200/50 text-red-500 hover:bg-slate-300 hover:text-red-600 dark:bg-black/20 dark:text-red-400 dark:hover:bg-black/40 dark:hover:text-red-300" @click="deleteCelebration(c.id)">
+                            <Button variant="ghost" size="icon" class="h-10 w-10 rounded-full bg-slate-200/50 text-red-500 hover:bg-slate-300 hover:text-red-600 dark:bg-black/20 dark:text-red-400 dark:hover:bg-black/40 dark:hover:text-red-300" @click="deleteCelebration(c.id)">
                                 <Trash2 class="h-4 w-4" />
                             </Button>
                         </div>

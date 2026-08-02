@@ -84,4 +84,24 @@ describe('CelebrationTab', () => {
 
         expect(axios.post).toHaveBeenCalledWith('/api/celebrations', expect.objectContaining({ message: 'Test Message' }))
     })
+
+    it('opens the edit dialog from the manage panel', async () => {
+        axios.get.mockResolvedValue({ data: [createCelebration()] })
+
+        wrapper = mount(CelebrationTab)
+        await new Promise((r) => setTimeout(r, 0))
+
+        const gear = wrapper.findAll('button').find((b) => b.classes().includes('absolute'))
+        await gear.trigger('click')
+        await new Promise((r) => setTimeout(r, 0))
+
+        const row = wrapper.find('.group')
+        expect(row.exists()).toBe(true)
+
+        const editBtn = row.findAll('button')[1]
+        await editBtn.trigger('click')
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(bodyText()).toContain('Edit Celebration')
+    })
 })
