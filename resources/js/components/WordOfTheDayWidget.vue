@@ -136,8 +136,8 @@ const speak = (text, langId) => {
             </Button>
         </div>
 
-        <div class="flex-1 flex flex-col items-center justify-center p-4">
-            <div class="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white/50 dark:border-white/5 dark:bg-white/5 p-8 shadow-sm flex flex-col items-center gap-8">
+        <div class="flex-1 min-h-0 flex overflow-y-auto p-4">
+            <div class="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white/50 dark:border-white/5 dark:bg-white/5 p-8 shadow-sm flex flex-col items-center gap-8 m-auto">
                 <!-- English Word -->
                 <div class="text-center cursor-pointer group hover:opacity-70 transition-all active:scale-95 flex flex-col items-center" @click="speak(currentWord.en, 'en')">
                     <span class="text-sm font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
