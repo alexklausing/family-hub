@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#89f7fe"/>
+      <stop offset="100%" stop-color="#66a6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <g>
+    <ellipse cx="340" cy="240" rx="120" ry="150" fill="#ff6b6b"/>
+    <path d="M300 330 C 310 460 320 560 340 640" stroke="#ff6b6b" stroke-width="4" fill="none"/>
+    <path d="M318 370 L 470 410 L 318 455 Z" fill="#ffd93d" opacity="0.9"/>
+    <ellipse cx="820" cy="300" rx="110" ry="140" fill="#ffd93d"/>
+    <path d="M790 390 C 800 500 810 590 825 660" stroke="#b8860b" stroke-width="4" fill="none"/>
+    <path d="M806 420 L 950 460 L 806 500 Z" fill="#ff6b6b" opacity="0.9"/>
+    <ellipse cx="1330" cy="230" rx="125" ry="155" fill="#4ecdc4"/>
+    <path d="M1295 330 C 1305 450 1320 560 1335 640" stroke="#2f8f8a" stroke-width="4" fill="none"/>
+    <path d="M1311 365 L 1470 405 L 1311 450 Z" fill="#ff6b6b" opacity="0.9"/>
+    <ellipse cx="1780" cy="320" rx="105" ry="135" fill="#a855f7"/>
+    <path d="M1755 405 C 1765 510 1775 600 1785 665" stroke="#7c3aed" stroke-width="4" fill="none"/>
+    <path d="M1767 430 L 1900 465 L 1767 500 Z" fill="#ffd93d" opacity="0.9"/>
+    <ellipse cx="560" cy="760" rx="100" ry="125" fill="#a855f7"/>
+    <path d="M535 840 C 545 950 555 1040 565 1100" stroke="#7c3aed" stroke-width="4" fill="none"/>
+    <path d="M552 870 L 690 905 L 552 940 Z" fill="#4ecdc4" opacity="0.9"/>
+    <ellipse cx="1120" cy="820" rx="105" ry="130" fill="#ff6b6b"/>
+    <path d="M1095 900 C 1105 1000 1115 1080 1125 1130" stroke="#ff6b6b" stroke-width="4" fill="none"/>
+    <path d="M1112 925 L 1245 960 L 1112 995 Z" fill="#a855f7" opacity="0.9"/>
+    <ellipse cx="1560" cy="780" rx="110" ry="135" fill="#ffd93d"/>
+    <path d="M1535 865 C 1545 965 1555 1050 1565 1110" stroke="#b8860b" stroke-width="4" fill="none"/>
+    <path d="M1550 890 L 1690 928 L 1550 962 Z" fill="#4ecdc4" opacity="0.9"/>
+  </g>
+</svg>

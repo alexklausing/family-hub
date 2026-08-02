@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import WorkspaceView from './WorkspaceView.vue'
 import OtherTab from './OtherTab.vue'
 import AuraTab from './AuraTab.vue'
+import CelebrationTab from './CelebrationTab.vue'
 
 // Extracted Subcomponents & Composable
 import { useDashboard } from './dashboard/useDashboard'
@@ -426,6 +427,14 @@ const handleCycleLayout = (workspace) => {
             <AuraTab />
         </div>
 
+        <!-- Full Screen Celebration Overlay -->
+        <div v-if="activeTab === 'unpinned' && unpinnedAppId === 'celebrations'" class="fixed inset-0 z-[100] bg-black">
+            <button @click="activeTab = 'other'" class="absolute top-6 left-6 z-[110] p-4 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md transition-colors">
+                <X class="w-8 h-8" />
+            </button>
+            <CelebrationTab />
+        </div>
+
         <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-6">
             <!-- Header Island Component -->
             <DashboardHeader 
@@ -516,7 +525,7 @@ const handleCycleLayout = (workspace) => {
                     class="m-0 h-full p-0 focus-visible:ring-0"
                 >
                     <WorkspaceView
-                        v-if="unpinnedAppId && unpinnedAppId !== 'aura'"
+                        v-if="unpinnedAppId && unpinnedAppId !== 'aura' && unpinnedAppId !== 'celebrations'"
                         :workspace="{ id: 'unpinned', name: 'Temporary', layout: 'full', apps: [unpinnedAppId] }"
                         :is-editing="false"
                         :events="filteredEvents"

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f0c29"/>
+      <stop offset="50%" stop-color="#302b63"/>
+      <stop offset="100%" stop-color="#24243e"/>
+    </linearGradient>
+    <radialGradient id="burst1">
+      <stop offset="0%" stop-color="#ffd93d"/>
+      <stop offset="100%" stop-color="#ffd93d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="burst2">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="100%" stop-color="#ff6b6b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="burst3">
+      <stop offset="0%" stop-color="#4ecdc4"/>
+      <stop offset="100%" stop-color="#4ecdc4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="burst4">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <g opacity="0.8">
+    <circle cx="480" cy="320" r="180" fill="url(#burst1)"/>
+    <circle cx="480" cy="320" r="150" fill="url(#burst1)"/>
+    <circle cx="480" cy="320" r="120" fill="url(#burst1)"/>
+    <circle cx="1080" cy="220" r="200" fill="url(#burst2)"/>
+    <circle cx="1080" cy="220" r="170" fill="url(#burst2)"/>
+    <circle cx="1080" cy="220" r="140" fill="url(#burst2)"/>
+    <circle cx="1560" cy="420" r="190" fill="url(#burst3)"/>
+    <circle cx="1560" cy="420" r="160" fill="url(#burst3)"/>
+    <circle cx="1560" cy="420" r="130" fill="url(#burst3)"/>
+    <circle cx="260" cy="780" r="160" fill="url(#burst4)"/>
+    <circle cx="260" cy="780" r="130" fill="url(#burst4)"/>
+    <circle cx="820" cy="700" r="180" fill="url(#burst1)"/>
+    <circle cx="820" cy="700" r="150" fill="url(#burst1)"/>
+    <circle cx="820" cy="700" r="120" fill="url(#burst1)"/>
+    <circle cx="1380" cy="840" r="170" fill="url(#burst2)"/>
+    <circle cx="1380" cy="840" r="140" fill="url(#burst2)"/>
+    <circle cx="1380" cy="840" r="110" fill="url(#burst2)"/>
+    <circle cx="1780" cy="760" r="150" fill="url(#burst4)"/>
+    <circle cx="1780" cy="760" r="120" fill="url(#burst4)"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="100" cy="120" r="2"/>
+    <circle cx="320" cy="80" r="1.5"/>
+    <circle cx="700" cy="140" r="2"/>
+    <circle cx="1240" cy="90" r="1.5"/>
+    <circle cx="1450" cy="180" r="2"/>
+    <circle cx="1720" cy="100" r="1.5"/>
+    <circle cx="1880" cy="300" r="2"/>
+    <circle cx="60" cy="500" r="1.5"/>
+    <circle cx="1900" cy="560" r="2"/>
+    <circle cx="560" cy="520" r="1.5"/>
+    <circle cx="1720" cy="640" r="1.5"/>
+    <circle cx="1120" cy="500" r="2"/>
+    <circle cx="80" cy="980" r="2"/>
+    <circle cx="1840" cy="1020" r="1.5"/>
+  </g>
+</svg>

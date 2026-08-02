@@ -16,14 +16,31 @@ const dialogMode = ref('add')
 const form = ref({ id: null, message: '', background: 'sunset', font: 'display', font_color: '#ffffff' })
 
 const backgrounds = {
-    sunset: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%)',
-    ocean: 'linear-gradient(135deg, #2b5876 0%, #4e4376 100%)',
-    forest: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
-    confetti: 'linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%)',
-    royal: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)',
-    candy: 'linear-gradient(135deg, #ff6fd8 0%, #3813c2 100%)',
-    night: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-    gold: 'linear-gradient(135deg, #f7971e 0%, #ffd200 100%)',
+    sunset: { type: 'gradient', value: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fdfcfb 100%)', label: 'Sunset' },
+    ocean: { type: 'gradient', value: 'linear-gradient(135deg, #2b5876 0%, #4e4376 100%)', label: 'Ocean' },
+    forest: { type: 'gradient', value: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)', label: 'Forest' },
+    royal: { type: 'gradient', value: 'linear-gradient(135deg, #141e30 0%, #243b55 100%)', label: 'Royal' },
+    candy: { type: 'gradient', value: 'linear-gradient(135deg, #ff6fd8 0%, #3813c2 100%)', label: 'Candy' },
+    night: { type: 'gradient', value: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)', label: 'Night' },
+    confetti: { type: 'image', value: '/img/celebrations/confetti.svg', label: 'Confetti' },
+    balloons: { type: 'image', value: '/img/celebrations/balloons.svg', label: 'Balloons' },
+    fireworks: { type: 'image', value: '/img/celebrations/fireworks.svg', label: 'Fireworks' },
+    stars: { type: 'image', value: '/img/celebrations/stars.svg', label: 'Stars' },
+    hearts: { type: 'image', value: '/img/celebrations/hearts.svg', label: 'Hearts' },
+    gold: { type: 'image', value: '/img/celebrations/gold.svg', label: 'Gold' },
+    birthday: { type: 'image', value: '/img/celebrations/birthday.svg', label: 'Birthday' },
+}
+
+const bgStyle = (key) => {
+    const bg = backgrounds[key] || backgrounds.sunset
+    if (bg.type === 'image') {
+        return {
+            backgroundImage: `url('${bg.value}')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+        }
+    }
+    return { background: bg.value }
 }
 
 const fonts = {
@@ -108,7 +125,7 @@ const deleteCelebration = async (id) => {
         <!-- Fullscreen Celebration Display -->
         <div
             class="w-full h-full flex items-center justify-center p-8"
-            :style="{ background: activeCelebration ? backgrounds[activeCelebration.background] || backgrounds.sunset : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }"
+            :style="activeCelebration ? bgStyle(activeCelebration.background) : { background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }"
         >
             <div
                 v-if="activeCelebration"
@@ -168,7 +185,7 @@ const deleteCelebration = async (id) => {
                     >
                         <div
                             class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[10px] font-black text-center px-1 overflow-hidden"
-                            :style="{ background: backgrounds[c.background] || backgrounds.sunset, color: c.font_color }"
+                            :style="{ ...bgStyle(c.background), color: c.font_color }"
                         >
                             {{ c.message.slice(0, 14) }}{{ c.message.length > 14 ? '…' : '' }}
                         </div>
@@ -176,7 +193,7 @@ const deleteCelebration = async (id) => {
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
                             <span class="truncate text-base font-bold leading-tight tracking-tight text-slate-900 dark:text-white/90">{{ c.message }}</span>
                             <span class="text-xs font-semibold uppercase tracking-wider text-primary">
-                                {{ fonts[c.font]?.label || c.font }} · {{ c.background }}
+                                {{ fonts[c.font]?.label || c.font }} · {{ backgrounds[c.background]?.label || c.background }}
                             </span>
                         </div>
 
@@ -213,16 +230,23 @@ const deleteCelebration = async (id) => {
                     </div>
                     <div class="grid gap-2">
                         <Label for="background" class="font-bold">Background</Label>
-                        <div class="grid grid-cols-4 gap-2">
+                        <div class="grid grid-cols-4 gap-3">
                             <button
                                 v-for="(bg, key) in backgrounds"
                                 :key="key"
                                 type="button"
-                                class="h-12 rounded-xl border-2 transition-all"
-                                :class="form.background === key ? 'border-slate-900 dark:border-white scale-105' : 'border-transparent'"
-                                :style="{ background: bg }"
+                                class="relative h-14 rounded-xl border-2 transition-all overflow-hidden"
+                                :class="form.background === key ? 'border-slate-900 dark:border-white scale-105 shadow-lg' : 'border-transparent hover:scale-105'"
+                                :style="bgStyle(key)"
                                 @click="form.background = key"
-                            />
+                            >
+                                <span
+                                    class="absolute bottom-1 left-0 right-0 text-center text-[9px] font-bold uppercase tracking-wide text-white"
+                                    style="text-shadow: 0 1px 4px rgba(0,0,0,0.6);"
+                                >
+                                    {{ bg.label }}
+                                </span>
+                            </button>
                         </div>
                     </div>
                     <div class="grid gap-2">
@@ -256,7 +280,7 @@ const deleteCelebration = async (id) => {
                         </div>
                     </div>
                     <div class="mt-2 rounded-2xl p-4 flex items-center justify-center"
-                        :style="{ background: backgrounds[form.background] || backgrounds.sunset }"
+                        :style="bgStyle(form.background)"
                     >
                         <span
                             class="text-xl font-black italic tracking-tight text-center"
