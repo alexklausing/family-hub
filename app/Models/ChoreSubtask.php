@@ -4,18 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ChoreCompletion extends Model
+class ChoreSubtask extends Model
 {
     protected $fillable = [
         'chore_id',
-        'date',
-        'status',
-        'awarded_value',
-        'completed_subtasks',
-    ];
-
-    protected $casts = [
-        'completed_subtasks' => 'array',
+        'title',
+        'order',
     ];
 
     public function chore()

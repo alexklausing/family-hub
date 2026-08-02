@@ -580,4 +580,129 @@ describe('ChoresTab', () => {
         expect(wrapper.vm.choreTimeMinute).toBe('35')
         expect(wrapper.vm.choreTimePeriod).toBe('PM')
     })
+
+    it('renders a subtask checklist and toggles individual steps via the API', async () => {
+        const subtasks = [
+            { id: 10, title: 'Step 1' },
+            { id: 11, title: 'Step 2' },
+        ]
+        mockChores[0].subtasks = subtasks
+        mockChores[0].completed_subtasks = []
+        mockChores[0].completed = false
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await vi.runAllTimersAsync()
+
+        // Checklist should be rendered with both steps
+        expect(wrapper.text()).toContain('Step 1')
+        expect(wrapper.text()).toContain('Step 2')
+
+        // Toggle only the first step
+        await wrapper.vm.toggleSubtask(wrapper.vm.chores[0], subtasks[0])
+
+        expect(axios.post).toHaveBeenCalledWith('/api/chores/1/toggle', {
+            date: expect.any(String),
+            subtask_ids: [10],
+        })
+        expect(wrapper.vm.chores[0].completed_subtasks).toEqual([10])
+        // Chore is NOT fully completed with only one of two steps
+        expect(wrapper.vm.chores[0].completed).toBe(false)
+    })
+
+    it('marks the chore completed and fires a celebration when the last subtask is checked', async () => {
+        const subtasks = [
+            { id: 10, title: 'Step 1' },
+            { id: 11, title: 'Step 2' },
+        ]
+        mockChores[0].subtasks = subtasks
+        mockChores[0].completed_subtasks = [10]
+        mockChores[0].completed = false
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await vi.runAllTimersAsync()
+
+        await wrapper.vm.toggleSubtask(wrapper.vm.chores[0], subtasks[1])
+
+        expect(axios.post).toHaveBeenCalledWith('/api/chores/1/toggle', {
+            date: expect.any(String),
+            subtask_ids: [10, 11],
+        })
+        expect(wrapper.vm.chores[0].completed).toBe(true)
+
+        // Fast forward timers for the Level 1 confetti
+        await vi.advanceTimersByTimeAsync(100)
+        expect(confetti).toHaveBeenCalled()
+    })
+
+    it('saves subtasks from the chore editor modal', async () => {
+        axios.post.mockResolvedValue({
+            data: { id: 9, title: 'New chore', subtasks: [] },
+        })
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await vi.runAllTimersAsync()
+
+        wrapper.vm.openAddModal()
+        wrapper.vm.addSubtask()
+        wrapper.vm.newChore.subtasks[0].title = 'Pick up toys'
+        wrapper.vm.newChore.title = 'Clean room'
+
+        await wrapper.vm.saveChore()
+
+        expect(axios.post).toHaveBeenCalledWith(
+            '/api/chores',
+            expect.objectContaining({
+                title: 'Clean room',
+                subtasks: [{ id: null, title: 'Pick up toys', order: 0 }],
+            }),
+        )
+        expect(wrapper.vm.isManageModalOpen).toBe(false)
+    })
+
+    it('loads existing subtasks when editing and removes steps in the modal', async () => {
+        const choreWithSubtasks = {
+            ...mockChores[0],
+            subtasks: [
+                { id: 10, title: 'Step 1' },
+                { id: 11, title: 'Step 2' },
+            ],
+        }
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await vi.runAllTimersAsync()
+
+        wrapper.vm.openEditModal(choreWithSubtasks)
+        expect(wrapper.vm.newChore.subtasks).toHaveLength(2)
+        expect(wrapper.vm.newChore.subtasks[0]).toEqual({
+            id: 10,
+            title: 'Step 1',
+        })
+
+        wrapper.vm.removeSubtask(1)
+        expect(wrapper.vm.newChore.subtasks).toHaveLength(1)
+    })
 })

@@ -37,4 +37,9 @@ class Chore extends Model
     {
         return $this->hasOne(BonusReward::class);
     }
+
+    public function subtasks()
+    {
+        return $this->hasMany(ChoreSubtask::class)->orderBy('order')->orderBy('id');
+    }
 }

@@ -36,6 +36,8 @@ import {
     Inbox,
     Clock,
     Delete,
+    ListChecks,
+    GripVertical,
 } from 'lucide-vue-next'
 
 const props = defineProps({ profiles: Array, activeProfile: String })
@@ -68,6 +70,7 @@ const blankChore = () => ({
     reward: '',
     is_bankable: true,
     label_id: null,
+    subtasks: [],
 })
 const newChore = ref(blankChore())
 
@@ -713,6 +716,10 @@ const openEditModal = (chore) => {
         reward: chore.reward || '',
         is_bankable: chore.is_bankable ?? true,
         label_id: chore.label_id || null,
+        subtasks: (chore.subtasks || []).map((s) => ({
+            id: s.id,
+            title: s.title,
+        })),
     }
     decodeRewardIntoFields(chore.reward)
     decodeChoreTime(chore.time)
@@ -746,6 +753,10 @@ const openDuplicateModal = (chore) => {
         reward: chore.reward || '',
         is_bankable: chore.is_bankable ?? true,
         label_id: chore.label_id || null,
+        subtasks: (chore.subtasks || []).map((s) => ({
+            id: null,
+            title: s.title,
+        })),
     }
     decodeRewardIntoFields(chore.reward)
     decodeChoreTime(chore.time)
@@ -774,6 +785,13 @@ const saveChore = async () => {
         } else {
             payload.bonus_reward = null
         }
+        payload.subtasks = newChore.value.subtasks
+            .map((s, i) => ({
+                id: s.id || null,
+                title: s.title.trim(),
+                order: i,
+            }))
+            .filter((s) => s.title)
         if (editingChore.value)
             await axios.put(`/api/chores/${editingChore.value.id}`, payload)
         else await axios.post('/api/chores', payload)
@@ -803,6 +821,73 @@ const toggleDay = (v) => {
     const i = newChore.value.days.indexOf(v)
     if (i === -1) newChore.value.days.push(v)
     else newChore.value.days.splice(i, 1)
+}
+
+// ── Subtask Editor ──────────────────────────────────────────────────────────
+const addSubtask = () => {
+    newChore.value.subtasks.push({ id: null, title: '' })
+}
+const removeSubtask = (index) => {
+    newChore.value.subtasks.splice(index, 1)
+}
+
+// ── Subtask Checklist (daily board) ─────────────────────────────────────────
+const isSubtaskDone = (chore, subtask) => {
+    return (chore.completed_subtasks || []).includes(subtask.id)
+}
+const subtaskProgress = (chore) => {
+    const subtasks = chore.subtasks || []
+    if (!subtasks.length) return 0
+    const done = (chore.completed_subtasks || []).filter((id) =>
+        subtasks.some((s) => s.id === id),
+    ).length
+    return done
+}
+const toggleSubtask = async (chore, subtask) => {
+    const doneIds = new Set(chore.completed_subtasks || [])
+    if (doneIds.has(subtask.id)) doneIds.delete(subtask.id)
+    else doneIds.add(subtask.id)
+
+    const prevDone = new Set(chore.completed_subtasks || [])
+    const wasCompleted = chore.completed
+    chore.completed_subtasks = [...doneIds]
+    chore.completed =
+        choreHasSubtasks(chore) &&
+        subtaskProgress(chore) === (chore.subtasks || []).length
+
+    try {
+        await axios.post(`/api/chores/${chore.id}/toggle`, {
+            date: new Date().toLocaleDateString('en-CA'),
+            subtask_ids: chore.completed_subtasks,
+        })
+
+        if (!wasCompleted && chore.completed) {
+            await nextTick()
+            const allChores = todaysChores.value
+            const boardDone =
+                allChores.length > 0 && allChores.every((c) => c.completed)
+            const groupDone = groupedChores.value.some(
+                (g) =>
+                    g.chores.includes(chore) &&
+                    g.chores.every((c) => c.completed),
+            )
+
+            if (boardDone) {
+                setTimeout(fireBoardConfetti, 150)
+            } else if (groupDone) {
+                setTimeout(fireGroupConfetti, 100)
+            } else {
+                setTimeout(fireTaskConfetti, 50)
+            }
+        }
+    } catch (e) {
+        console.error(e)
+        chore.completed_subtasks = [...prevDone]
+        chore.completed = wasCompleted
+    }
+}
+const choreHasSubtasks = (chore) => {
+    return !!(chore.subtasks && chore.subtasks.length)
 }
 
 // ── Clone Group ──────────────────────────────────────────────────────────────
@@ -1394,6 +1479,7 @@ watch(
                             :class="{ 'opacity-40 grayscale': chore.completed }"
                         >
                             <button
+                                v-if="!choreHasSubtasks(chore)"
                                 @click="toggleChore(chore)"
                                 class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all"
                                 :class="
@@ -1421,8 +1507,51 @@ watch(
                                     class="text-xs font-semibold opacity-40"
                                     >By {{ formatTime(chore.time) }}</span
                                 >
+
+                                <!-- Subtask checklist -->
+                                <div
+                                    v-if="choreHasSubtasks(chore)"
+                                    class="mt-1.5 space-y-1"
+                                >
+                                    <div
+                                        v-for="st in chore.subtasks"
+                                        :key="st.id"
+                                        class="flex items-center gap-2"
+                                    >
+                                        <button
+                                            @click.stop="
+                                                toggleSubtask(chore, st)
+                                            "
+                                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all"
+                                            :class="
+                                                isSubtaskDone(chore, st)
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'border-primary/30 hover:border-primary border-2'
+                                            "
+                                        >
+                                            <CheckCircle2
+                                                v-if="isSubtaskDone(chore, st)"
+                                                class="h-3 w-3"
+                                            />
+                                        </button>
+                                        <span
+                                            class="min-w-0 text-xs font-semibold"
+                                            :class="
+                                                isSubtaskDone(chore, st)
+                                                    ? 'text-muted-foreground line-through opacity-60'
+                                                    : 'text-foreground/80'
+                                            "
+                                            >{{ st.title }}</span
+                                        >
+                                    </div>
+                                </div>
+
                                 <span
-                                    v-if="chore.completed && chore.reward && chore.is_bankable === false"
+                                    v-if="
+                                        chore.completed &&
+                                        chore.reward &&
+                                        chore.is_bankable === false
+                                    "
                                     class="mt-0.5 inline-block text-xs font-bold text-green-600 dark:text-green-400"
                                 >
                                     🎉 {{ chore.reward }} earned for today!
@@ -2260,6 +2389,63 @@ watch(
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Subtasks / Steps -->
+                    <div class="grid gap-1.5">
+                        <label
+                            class="flex items-center justify-between text-sm font-bold"
+                        >
+                            <span class="flex items-center gap-1.5">
+                                <ListChecks class="h-3.5 w-3.5" /> Steps
+                                <span class="font-normal opacity-50"
+                                    >(Optional)</span
+                                >
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="xs"
+                                class="h-7 px-2 text-xs"
+                                @click="addSubtask"
+                            >
+                                <Plus class="mr-1 h-3.5 w-3.5" /> Add Step
+                            </Button>
+                        </label>
+                        <div
+                            v-if="newChore.subtasks.length"
+                            class="space-y-1.5"
+                        >
+                            <div
+                                v-for="(st, i) in newChore.subtasks"
+                                :key="i"
+                                class="flex items-center gap-2"
+                            >
+                                <GripVertical
+                                    class="h-4 w-4 shrink-0 opacity-30"
+                                />
+                                <Input
+                                    v-model="st.title"
+                                    placeholder="e.g. Pick up toys & clothes"
+                                    class="h-9 flex-1 text-sm"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-red-500"
+                                    @click="removeSubtask(i)"
+                                >
+                                    <Trash2 class="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                        <p
+                            v-else
+                            class="text-muted-foreground rounded-lg bg-muted/50 px-3 py-2 text-xs"
+                        >
+                            Add steps to turn this chore into a checklist.
+                        </p>
                     </div>
 
                     <!-- Days -->

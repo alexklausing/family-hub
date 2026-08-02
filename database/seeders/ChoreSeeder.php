@@ -67,7 +67,8 @@ class ChoreSeeder extends Seeder
             // Weekend Deep Clean group
             ['title' => 'Vacuum living room',    'time' => '11:00', 'days' => self::SATURDAY,    'label_id' => $weekendDeepClean->id, 'reward' => null],
             ['title' => 'Mop kitchen floor',     'time' => '11:30', 'days' => self::SATURDAY,    'label_id' => $weekendDeepClean->id, 'reward' => null],
-            ['title' => 'Clean bathrooms',       'time' => '12:00', 'days' => self::SATURDAY,    'label_id' => $weekendDeepClean->id, 'reward' => null],
+            ['title' => 'Clean bathrooms',       'time' => '12:00', 'days' => self::SATURDAY,    'label_id' => $weekendDeepClean->id, 'reward' => null,
+                'subtasks' => ['Scrub toilet & sink', 'Wipe mirror & counters', 'Vacuum the floor']],
             ['title' => 'Take out recycling',    'time' => null,    'days' => self::SUNDAY,      'label_id' => null,                  'reward' => null],
             // Weekday shared
             ['title' => 'Run dishwasher',        'time' => '19:30', 'days' => self::EVERY_DAY,   'label_id' => null,                  'reward' => null],
@@ -75,7 +76,7 @@ class ChoreSeeder extends Seeder
         ];
 
         foreach ($familyChores as $chore) {
-            Chore::create([
+            $model = Chore::create([
                 'profile' => 'Family',
                 'title' => $chore['title'],
                 'time' => $chore['time'],
@@ -84,6 +85,7 @@ class ChoreSeeder extends Seeder
                 'reward' => $chore['reward'],
                 'order' => $order++,
             ]);
+            $this->createSubtasks($model, $chore);
         }
 
         // ── 3. EMILY'S CHORES ────────────────────────────────────────────────
@@ -103,7 +105,8 @@ class ChoreSeeder extends Seeder
             ['title' => 'Read for 20 minutes',   'time' => '16:30', 'days' => self::EVERY_DAY,   'label_id' => $screenTimeList->id, 'reward' => null],
 
             // Homework Block group (reward: Pick dessert)
-            ['title' => 'Do homework',           'time' => '17:00', 'days' => self::WEEKDAYS,    'label_id' => $homework->id,       'reward' => null],
+            ['title' => 'Do homework',           'time' => '17:00', 'days' => self::WEEKDAYS,    'label_id' => $homework->id,       'reward' => null,
+                'subtasks' => ['Math worksheet', 'Spelling words', 'Read for 15 min']],
             ['title' => 'Pack backpack',         'time' => '20:00', 'days' => self::WEEKDAYS,    'label_id' => $homework->id,       'reward' => null],
 
             // Bedtime Routine group
@@ -112,12 +115,13 @@ class ChoreSeeder extends Seeder
             ['title' => 'Lights out',            'time' => '21:00', 'days' => self::EVERY_DAY,   'label_id' => $bedtimeRoutine->id, 'reward' => null],
 
             // Individual chores with individual rewards
-            ['title' => 'Clean room',            'time' => '14:00', 'days' => self::SATURDAY,    'label_id' => null,                'reward' => '$0.25'],
+            ['title' => 'Clean room',            'time' => '14:00', 'days' => self::SATURDAY,    'label_id' => null,                'reward' => '$0.25',
+                'subtasks' => ['Pick up toys & clothes', 'Dust surfaces', 'Vacuum the floor']],
             ['title' => 'Help set dinner table', 'time' => '17:45', 'days' => self::EVERY_DAY,   'label_id' => null,                'reward' => '$0.10'],
         ];
 
         foreach ($emilyChores as $chore) {
-            Chore::create([
+            $model = Chore::create([
                 'profile' => 'Emily',
                 'title' => $chore['title'],
                 'time' => $chore['time'],
@@ -126,6 +130,7 @@ class ChoreSeeder extends Seeder
                 'reward' => $chore['reward'],
                 'order' => $order++,
             ]);
+            $this->createSubtasks($model, $chore);
         }
 
         // ── 4. HENRY'S CHORES ─────────────────────────────────────────────────
@@ -222,5 +227,18 @@ class ChoreSeeder extends Seeder
         }
 
         $this->command->info('✅ ChoreSeeder complete! Created '.Chore::count().' chores across '.Label::count().' labels.');
+    }
+
+    /**
+     * Create subtasks for a chore if any were defined in the seed data.
+     */
+    private function createSubtasks(Chore $chore, array $data): void
+    {
+        foreach ($data['subtasks'] ?? [] as $index => $title) {
+            $chore->subtasks()->create([
+                'title' => $title,
+                'order' => $index,
+            ]);
+        }
     }
 }

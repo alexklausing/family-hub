@@ -400,6 +400,11 @@ const initMap = () => {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        // The document sets <meta name="referrer" content="no-referrer"> so Google
+        // TTS (Word of the Day) works, but OSM's tile policy rejects requests
+        // without a Referer. Element-level referrerPolicy IS honored for <img>
+        // in Chromium (unlike audio/video), so send the origin for tiles only.
+        referrerPolicy: 'origin',
     }).addTo(map)
 
     updateRadarLayers()
