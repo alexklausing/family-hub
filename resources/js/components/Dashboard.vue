@@ -21,7 +21,7 @@ import { useSleepException } from '@/composables/useSleepException'
 
 const { alerts, fetchWeather, weatherData } = useWeather()
 
-const { hasSleepException, enableException, disableException } = useSleepException()
+const { hasSleepException } = useSleepException()
 
 const {
     isSettingsDialogOpen,
@@ -286,18 +286,8 @@ watch(hasSleepException, (active) => {
     }
 })
 
-// Keep the hub awake while a sleep-exception feature is on screen
-watch(
-    () => activeTab.value === 'unpinned' && unpinnedAppId.value === 'celebrations',
-    (isCelebrationFullscreen) => {
-        if (isCelebrationFullscreen) {
-            enableException('celebration')
-        } else {
-            disableException('celebration')
-        }
-    },
-    { immediate: true },
-)
+// Keep the hub awake while a sleep-exception feature is on screen.
+// CelebrationTab registers its own 'celebration' exception while mounted.
 
 onUnmounted(() => {
     if (themeInterval) clearInterval(themeInterval)
@@ -307,7 +297,6 @@ onUnmounted(() => {
     window.removeEventListener('click', resetInactivityTimer)
     window.removeEventListener('keydown', resetInactivityTimer)
     if (inactivityTimer) clearTimeout(inactivityTimer)
-    disableException('celebration')
 })
 
 // (Moved up for activeTab init)

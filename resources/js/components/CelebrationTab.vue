@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
 import { Settings, Plus, Pencil, Trash2, X, Star, StarOff, PartyPopper } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useConfirm } from '@/composables/useConfirm'
+import { useSleepException } from '@/composables/useSleepException'
+
+// Keep the hub awake while the celebration is on screen, regardless of how it
+// was opened (fullscreen overlay or a pinned workspace).
+const { enableException, disableException } = useSleepException()
+onMounted(() => {
+    enableException('celebration')
+})
+onUnmounted(() => {
+    disableException('celebration')
+})
 
 const celebrations = ref([])
 const { confirmAsync } = useConfirm()

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import axios from 'axios'
 import CelebrationTab from './CelebrationTab.vue'
+import { useSleepException } from '@/composables/useSleepException'
 
 vi.mock('axios', () => ({
     default: {
@@ -103,5 +104,18 @@ describe('CelebrationTab', () => {
         await new Promise((r) => setTimeout(r, 0))
 
         expect(bodyText()).toContain('Edit Celebration')
+    })
+
+    it('keeps the hub awake while mounted', async () => {
+        const { activeExceptions } = useSleepException()
+
+        axios.get.mockResolvedValue({ data: [createCelebration()] })
+        wrapper = mount(CelebrationTab)
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(activeExceptions.has('celebration')).toBe(true)
+
+        wrapper.unmount()
+        expect(activeExceptions.has('celebration')).toBe(false)
     })
 })
