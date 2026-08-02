@@ -3,6 +3,10 @@
 # This script polls the local dashboard to physically power down the monitor backlight.
 # To run this in the background, you can use: nohup ./kiosk-bridge.sh &
 
+# Resolve the project directory from this script's location so the bridge works
+# regardless of the current working directory (e.g. when auto-started at login).
+cd "$(dirname "$0")"
+
 APP_URL=$(grep APP_URL .env | cut -d '=' -f2)
 URL="${APP_URL}/api/monitor/state"
 LAST_STATE="wake"
