@@ -9,6 +9,7 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import luxonPlugin from '@fullcalendar/luxon3'
 import { useLongPress } from '@/composables/useLongPress'
+import { useConfirm } from '@/composables/useConfirm'
 
 import {
     Dialog,
@@ -95,6 +96,8 @@ const isFilterDialogOpen = ref(false)
 const isImportCalendarModalOpen = ref(false)
 const importModalMode = ref('create')
 const editingCalendarId = ref(null)
+
+const { confirmAsync } = useConfirm()
 
 const getRandomColor = () => {
     const colors = [
@@ -614,7 +617,12 @@ const submitImportCalendar = async () => {
 }
 
 const deleteCalendar = async (calendarId) => {
-    if (!confirm('Are you sure you want to delete this calendar?')) return
+    const confirmed = await confirmAsync({
+        title: 'Delete this calendar?',
+        message: 'Are you sure you want to delete this calendar?',
+        confirmLabel: 'Delete',
+    })
+    if (!confirmed) return
     try {
         await axios.delete(`/api/calendars/${calendarId}`)
         // Refresh events

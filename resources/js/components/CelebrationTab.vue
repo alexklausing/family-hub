@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useConfirm } from '@/composables/useConfirm'
 
 const celebrations = ref([])
+const { confirmAsync } = useConfirm()
 const isLoading = ref(true)
 const loadError = ref(false)
 const isManageOpen = ref(false)
@@ -109,13 +111,17 @@ const save = async () => {
 }
 
 const deleteCelebration = async (id) => {
-    if (confirm('Delete this celebration?')) {
-        try {
-            await axios.delete(`/api/celebrations/${id}`)
-            fetchCelebrations()
-        } catch (e) {
-            console.error('Failed to delete celebration', e)
-        }
+    const confirmed = await confirmAsync({
+        title: 'Delete this celebration?',
+        message: 'This celebration will be permanently removed.',
+        confirmLabel: 'Delete',
+    })
+    if (!confirmed) return
+    try {
+        await axios.delete(`/api/celebrations/${id}`)
+        fetchCelebrations()
+    } catch (e) {
+        console.error('Failed to delete celebration', e)
     }
 }
 </script>

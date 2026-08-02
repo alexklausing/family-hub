@@ -5,12 +5,14 @@ import { Plus, Pencil, Trash2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useConfirm } from '@/composables/useConfirm'
 import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const countdowns = ref([])
+const { confirmAsync } = useConfirm()
 const isDialogOpen = ref(false)
 const dialogMode = ref('add')
 const form = ref({ id: null, title: '', target_date: '', icon: '' })
@@ -99,13 +101,17 @@ const save = async () => {
 }
 
 const deleteCountdown = async (id) => {
-    if (confirm('Delete this countdown?')) {
-        try {
-            await axios.delete(`/api/countdowns/${id}`)
-            fetchCountdowns()
-        } catch (e) {
-            console.error('Failed to delete countdown', e)
-        }
+    const confirmed = await confirmAsync({
+        title: 'Delete countdown?',
+        message: 'This countdown will be permanently removed.',
+        confirmLabel: 'Delete',
+    })
+    if (!confirmed) return
+    try {
+        await axios.delete(`/api/countdowns/${id}`)
+        fetchCountdowns()
+    } catch (e) {
+        console.error('Failed to delete countdown', e)
     }
 }
 </script>

@@ -15,6 +15,7 @@ import DashboardHeader from './dashboard/DashboardHeader.vue'
 import SettingsDialog from './dashboard/SettingsDialog.vue'
 import SyncDialog from './dashboard/SyncDialog.vue'
 import VirtualKeyboard from './VirtualKeyboard.vue'
+import ConfirmDialog from './ui/ConfirmDialog.vue'
 import { useWeather } from '@/composables/useWeather'
 import { useSleepException } from '@/composables/useSleepException'
 
@@ -663,6 +664,9 @@ const handleCycleLayout = (workspace) => {
 
         <!-- Global Virtual Keyboard -->
         <VirtualKeyboard />
+
+        <!-- Global confirmation dialog -->
+        <ConfirmDialog />
     </div>
 </template>
 

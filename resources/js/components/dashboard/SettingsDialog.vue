@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
+import { useConfirm } from '@/composables/useConfirm'
 import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid, Palette } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -122,17 +123,23 @@ const startEditingLayout = () => {
     isOpen.value = false
 }
 
-const resetLayouts = () => {
-    if (confirm('Are you sure you want to reset all tabs and layouts to default? This cannot be undone.')) {
-        emit('reset-layouts')
-        isOpen.value = false
-    }
+const resetLayouts = async () => {
+    const confirmed = await confirmAsync({
+        title: 'Reset all tabs and layouts?',
+        message: 'Are you sure you want to reset all tabs and layouts to default? This cannot be undone.',
+        confirmLabel: 'Reset',
+    })
+    if (!confirmed) return
+    emit('reset-layouts')
+    isOpen.value = false
 }
 
 const monitorSettingsData = computed({
     get: () => props.monitorSettings,
     set: (val) => emit('update:monitorSettings', val),
 })
+
+const { confirmAsync } = useConfirm()
 
 const sleepNow = () => {
     emit('sleep-now')

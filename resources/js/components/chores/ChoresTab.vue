@@ -3,6 +3,7 @@ import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import confetti from 'canvas-confetti'
 import axios from 'axios'
 import { useIdle } from '@vueuse/core'
+import { useConfirm } from '@/composables/useConfirm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -782,8 +783,15 @@ const saveChore = async () => {
         console.error(e)
     }
 }
+const { confirmAsync } = useConfirm()
+
 const deleteChore = async (chore) => {
-    if (!confirm(`Delete "${chore.title}"?`)) return
+    const confirmed = await confirmAsync({
+        title: 'Delete chore?',
+        message: `"${chore.title}" will be permanently removed.`,
+        confirmLabel: 'Delete',
+    })
+    if (!confirmed) return
     try {
         await axios.delete(`/api/chores/${chore.id}`)
         fetchChores()
@@ -929,12 +937,12 @@ const saveLabel = async () => {
     }
 }
 const deleteLabel = async (label) => {
-    if (
-        !confirm(
-            `Delete label "${label.name}"? Chores using it will become unlabeled.`,
-        )
-    )
-        return
+    const confirmed = await confirmAsync({
+        title: `Delete label "${label.name}"?`,
+        message: 'Chores using this label will become unlabeled.',
+        confirmLabel: 'Delete',
+    })
+    if (!confirmed) return
     try {
         await axios.delete(`/api/labels/${label.id}`)
         labels.value = labels.value.filter((l) => l.id !== label.id)
