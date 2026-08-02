@@ -15,13 +15,14 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 
 // Enabled languages state
-const enabledLanguages = useStorage('word-of-day-languages', ['fr', 'de', 'no'])
+const enabledLanguages = useStorage('word-of-day-languages', ['fr', 'de', 'no', 'lb'])
 
 const availableLanguages = [
     { id: 'fr', name: 'French', flag: '🇫🇷' },
     { id: 'de', name: 'German', flag: '🇩🇪' },
     { id: 'no', name: 'Norwegian', flag: '🇳🇴' },
     { id: 'es', name: 'Spanish', flag: '🇪🇸' },
+    { id: 'lb', name: 'Luxembourgish', flag: '🇱🇺' },
 ]
 
 const isSettingsOpen = ref(false)
@@ -36,37 +37,37 @@ const toggleLanguage = (langId) => {
 
 // 31 days of phrases for a rotating schedule
 const phrases = [
-    { en: "Hello", fr: "Bonjour", de: "Hallo", no: "Hallo", es: "Hola" },
-    { en: "Thank you", fr: "Merci", de: "Danke", no: "Takk", es: "Gracias" },
-    { en: "Please", fr: "S'il vous plaît", de: "Bitte", no: "Vær så snill", es: "Por favor" },
-    { en: "Good morning", fr: "Bonjour", de: "Guten Morgen", no: "God morgen", es: "Buenos días" },
-    { en: "Good night", fr: "Bonne nuit", de: "Gute Nacht", no: "God natt", es: "Buenas noches" },
-    { en: "Yes", fr: "Oui", de: "Ja", no: "Ja", es: "Sí" },
-    { en: "No", fr: "Non", de: "Nein", no: "Nei", es: "No" },
-    { en: "Goodbye", fr: "Au revoir", de: "Auf Wiedersehen", no: "Ha det bra", es: "Adiós" },
-    { en: "How are you?", fr: "Comment allez-vous ?", de: "Wie geht es dir?", no: "Hvordan har du det?", es: "¿Cómo estás?" },
-    { en: "I am fine", fr: "Je vais bien", de: "Mir geht es gut", no: "Jeg har det bra", es: "Estoy bien" },
-    { en: "Excuse me", fr: "Excusez-moi", de: "Entschuldigung", no: "Unnskyld meg", es: "Disculpe" },
-    { en: "I'm sorry", fr: "Je suis désolé", de: "Es tut mir leid", no: "Beklager", es: "Lo siento" },
-    { en: "What is your name?", fr: "Comment vous appelez-vous ?", de: "Wie heißt du?", no: "Hva heter du?", es: "¿Cómo te llamas?" },
-    { en: "My name is...", fr: "Je m'appelle...", de: "Ich heiße...", no: "Jeg heter...", es: "Me llamo..." },
-    { en: "Where is the bathroom?", fr: "Où sont les toilettes ?", de: "Wo ist die Toilette?", no: "Hvor er toalettet?", es: "¿Dónde está el baño?" },
-    { en: "How much is this?", fr: "Combien ça coûte ?", de: "Wie viel kostet das?", no: "Hvor mye koster dette?", es: "¿Cuánto cuesta esto?" },
-    { en: "I don't understand", fr: "Je ne comprends pas", de: "Ich verstehe nicht", no: "Jeg forstår ikke", es: "No entiendo" },
-    { en: "Do you speak English?", fr: "Parlez-vous anglais ?", de: "Sprechen Sie Englisch?", no: "Snakker du engelsk?", es: "¿Hablas inglés?" },
-    { en: "I love you", fr: "Je t'aime", de: "Ich liebe dich", no: "Jeg elsker deg", es: "Te amo" },
-    { en: "Water", fr: "Eau", de: "Wasser", no: "Vann", es: "Agua" },
-    { en: "Food", fr: "Nourriture", de: "Essen", no: "Mat", es: "Comida" },
-    { en: "Delicious", fr: "Délicieux", de: "Lecker", no: "Deilig", es: "Delicioso" },
-    { en: "Beautiful", fr: "Beau / Belle", de: "Schön", no: "Vakker", es: "Hermoso" },
-    { en: "Friend", fr: "Ami", de: "Freund", no: "Venn", es: "Amigo" },
-    { en: "Family", fr: "Famille", de: "Familie", no: "Familie", es: "Familia" },
-    { en: "Today", fr: "Aujourd'hui", de: "Heute", no: "I dag", es: "Hoy" },
-    { en: "Tomorrow", fr: "Demain", de: "Morgen", no: "I morgen", es: "Mañana" },
-    { en: "Always", fr: "Toujours", de: "Immer", no: "Alltid", es: "Siempre" },
-    { en: "Happy", fr: "Heureux", de: "Glücklich", no: "Lykkelig", es: "Feliz" },
-    { en: "Tired", fr: "Fatigué", de: "Müde", no: "Trøtt", es: "Cansado" },
-    { en: "Let's go!", fr: "Allons-y !", de: "Lass uns gehen!", no: "La oss gå!", es: "¡Vamos!" }
+    { en: "Hello", fr: "Bonjour", de: "Hallo", no: "Hallo", es: "Hola", lb: "Moien" },
+    { en: "Thank you", fr: "Merci", de: "Danke", no: "Takk", es: "Gracias", lb: "Merci" },
+    { en: "Please", fr: "S'il vous plaît", de: "Bitte", no: "Vær så snill", es: "Por favor", lb: "Wann ech gelift" },
+    { en: "Good morning", fr: "Bonjour", de: "Guten Morgen", no: "God morgen", es: "Buenos días", lb: "Gudde Moien" },
+    { en: "Good night", fr: "Bonne nuit", de: "Gute Nacht", no: "God natt", es: "Buenas noches", lb: "Gutt Nuecht" },
+    { en: "Yes", fr: "Oui", de: "Ja", no: "Ja", es: "Sí", lb: "Jo" },
+    { en: "No", fr: "Non", de: "Nein", no: "Nei", es: "No", lb: "Nee" },
+    { en: "Goodbye", fr: "Au revoir", de: "Auf Wiedersehen", no: "Ha det bra", es: "Adiós", lb: "Äddi" },
+    { en: "How are you?", fr: "Comment allez-vous ?", de: "Wie geht es dir?", no: "Hvordan har du det?", es: "¿Cómo estás?", lb: "Wéi geet et dir?" },
+    { en: "I am fine", fr: "Je vais bien", de: "Mir geht es gut", no: "Jeg har det bra", es: "Estoy bien", lb: "Mir geet et gutt" },
+    { en: "Excuse me", fr: "Excusez-moi", de: "Entschuldigung", no: "Unnskyld meg", es: "Disculpe", lb: "Pardon" },
+    { en: "I'm sorry", fr: "Je suis désolé", de: "Es tut mir leid", no: "Beklager", es: "Lo siento", lb: "Et deet mir leed" },
+    { en: "What is your name?", fr: "Comment vous appelez-vous ?", de: "Wie heißt du?", no: "Hva heter du?", es: "¿Cómo te llamas?", lb: "Wéi heeschs du?" },
+    { en: "My name is...", fr: "Je m'appelle...", de: "Ich heiße...", no: "Jeg heter...", es: "Me llamo...", lb: "Ech heeschen..." },
+    { en: "Where is the bathroom?", fr: "Où sont les toilettes ?", de: "Wo ist die Toilette?", no: "Hvor er toalettet?", es: "¿Dónde está el baño?", lb: "Wou ass d'Toilette?" },
+    { en: "How much is this?", fr: "Combien ça coûte ?", de: "Wie viel kostet das?", no: "Hvor mye koster dette?", es: "¿Cuánto cuesta esto?", lb: "Wéi vill kascht dat?" },
+    { en: "I don't understand", fr: "Je ne comprends pas", de: "Ich verstehe nicht", no: "Jeg forstår ikke", es: "No entiendo", lb: "Ech verstinn net" },
+    { en: "Do you speak English?", fr: "Parlez-vous anglais ?", de: "Sprechen Sie Englisch?", no: "Snakker du engelsk?", es: "¿Hablas inglés?", lb: "Schwätz dir Englesch?" },
+    { en: "I love you", fr: "Je t'aime", de: "Ich liebe dich", no: "Jeg elsker deg", es: "Te amo", lb: "Ech hunn dech gär" },
+    { en: "Water", fr: "Eau", de: "Wasser", no: "Vann", es: "Agua", lb: "Waasser" },
+    { en: "Food", fr: "Nourriture", de: "Essen", no: "Mat", es: "Comida", lb: "Iessen" },
+    { en: "Delicious", fr: "Délicieux", de: "Lecker", no: "Deilig", es: "Delicioso", lb: "Lecker" },
+    { en: "Beautiful", fr: "Beau / Belle", de: "Schön", no: "Vakker", es: "Hermoso", lb: "Schéin" },
+    { en: "Friend", fr: "Ami", de: "Freund", no: "Venn", es: "Amigo", lb: "Frënd" },
+    { en: "Family", fr: "Famille", de: "Familie", no: "Familie", es: "Familia", lb: "Famill" },
+    { en: "Today", fr: "Aujourd'hui", de: "Heute", no: "I dag", es: "Hoy", lb: "Haut" },
+    { en: "Tomorrow", fr: "Demain", de: "Morgen", no: "I morgen", es: "Mañana", lb: "Muer" },
+    { en: "Always", fr: "Toujours", de: "Immer", no: "Alltid", es: "Siempre", lb: "Ëmmer" },
+    { en: "Happy", fr: "Heureux", de: "Glücklich", no: "Lykkelig", es: "Feliz", lb: "Glécklech" },
+    { en: "Tired", fr: "Fatigué", de: "Müde", no: "Trøtt", es: "Cansado", lb: "Midd" },
+    { en: "Let's go!", fr: "Allons-y !", de: "Lass uns gehen!", no: "La oss gå!", es: "¡Vamos!", lb: "Mir ginn!" }
 ]
 
 const getWordOfTheDay = () => {
@@ -87,7 +88,8 @@ const getVoiceLang = (langId) => {
         fr: 'fr-FR',
         de: 'de-DE',
         no: 'nb-NO',
-        es: 'es-ES'
+        es: 'es-ES',
+        lb: 'lb-LU'
     }
     return map[langId] || 'en-US'
 }
