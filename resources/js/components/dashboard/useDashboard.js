@@ -86,7 +86,7 @@ export function useDashboard() {
         if (savedUnused) {
             unusedApps.value = JSON.parse(savedUnused)
         } else {
-            unusedApps.value = ['fun-facts']
+            unusedApps.value = []
             saveFilters()
         }
 
@@ -162,7 +162,7 @@ export function useDashboard() {
             { id: 'ws_shopping', name: 'Shopping', layout: 'full', apps: ['shopping'] },
             { id: 'ws_chores', name: 'Chores', layout: 'full', apps: ['chores'] },
         ]
-        unusedApps.value = ['fun-facts']
+        unusedApps.value = []
         saveFilters()
     }
 

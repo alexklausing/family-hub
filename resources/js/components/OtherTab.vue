@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, BadgeCheck, CheckCircle2, Minus, Plus, Clock, Globe, PartyPopper } from 'lucide-vue-next'
+import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, CheckCircle2, Minus, Plus, Clock, Globe, PartyPopper } from 'lucide-vue-next'
 
 const props = defineProps({
     workspaces: {
@@ -65,12 +65,6 @@ const allApps = [
         name: 'Word of the Day',
         icon: Globe,
         color: 'bg-emerald-500',
-    },
-    {
-        id: 'fun-facts',
-        name: 'Fun Facts',
-        icon: BadgeCheck,
-        color: 'bg-yellow-500',
     },
     {
         id: 'countdowns',
