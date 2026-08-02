@@ -16,8 +16,11 @@ import SettingsDialog from './dashboard/SettingsDialog.vue'
 import SyncDialog from './dashboard/SyncDialog.vue'
 import VirtualKeyboard from './VirtualKeyboard.vue'
 import { useWeather } from '@/composables/useWeather'
+import { useSleepException } from '@/composables/useSleepException'
 
 const { alerts, fetchWeather, weatherData } = useWeather()
+
+const { hasSleepException, enableException, disableException } = useSleepException()
 
 const {
     isSettingsDialogOpen,
@@ -55,6 +58,11 @@ const addingToWorkspaceId = ref(null)
 const unpinnedAppId = ref(null)
 
 const isSleeping = ref(false)
+
+const goToSleep = () => {
+    if (hasSleepException.value) return
+    isSleeping.value = true
+}
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
@@ -213,7 +221,7 @@ onMounted(() => {
         const currentTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
         
         if (currentTime === monitorSettings.value.off) {
-            isSleeping.value = true
+            goToSleep()
         } else if (currentTime === monitorSettings.value.on) {
             isSleeping.value = false
         }
@@ -248,7 +256,7 @@ const resetInactivityTimer = () => {
     
     if (monitorSettings.value.enabled && monitorSettings.value.idleTimeout > 0 && !isSleeping.value) {
         inactivityTimer = setTimeout(() => {
-            isSleeping.value = true
+            goToSleep()
         }, monitorSettings.value.idleTimeout * 60000)
     }
 }
@@ -261,6 +269,35 @@ watch(isSleeping, (newVal) => {
     }
 })
 
+// When a sleep exception activates, cancel the pending idle timer and wake
+// the hub if it was already asleep. Restart the timer once it clears.
+watch(hasSleepException, (active) => {
+    if (active) {
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer)
+            inactivityTimer = null
+        }
+        if (isSleeping.value) {
+            isSleeping.value = false
+        }
+    } else {
+        resetInactivityTimer()
+    }
+})
+
+// Keep the hub awake while a sleep-exception feature is on screen
+watch(
+    () => activeTab.value === 'unpinned' && unpinnedAppId.value === 'celebrations',
+    (isCelebrationFullscreen) => {
+        if (isCelebrationFullscreen) {
+            enableException('celebration')
+        } else {
+            disableException('celebration')
+        }
+    },
+    { immediate: true },
+)
+
 onUnmounted(() => {
     if (themeInterval) clearInterval(themeInterval)
     if (kioskInterval) clearInterval(kioskInterval)
@@ -269,6 +306,7 @@ onUnmounted(() => {
     window.removeEventListener('click', resetInactivityTimer)
     window.removeEventListener('keydown', resetInactivityTimer)
     if (inactivityTimer) clearTimeout(inactivityTimer)
+    disableException('celebration')
 })
 
 // (Moved up for activeTab init)
@@ -446,7 +484,7 @@ const handleCycleLayout = (workspace) => {
                 @open-settings="isSettingsDialogOpen = true" 
                 @toggle-edit="handleToggleEdit"
                 @reorder-workspaces="reorderWorkspaces"
-                @sleep-now="isSleeping = true"
+                @sleep-now="goToSleep"
             />
 
             <!-- Global Weather Alerts Banner -->
@@ -582,7 +620,7 @@ const handleCycleLayout = (workspace) => {
             @update:localTimezone="saveFilters"
             @update:timeOffset="saveFilters"
             @update:monitorSettings="saveFilters"
-            @sleep-now="isSleeping = true"
+            @sleep-now="goToSleep"
             @reset-layouts="() => { resetWorkspaces(); activeTab = workspaces[0]?.id || 'other'; }"
         />
 

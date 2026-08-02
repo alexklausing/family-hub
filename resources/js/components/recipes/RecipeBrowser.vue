@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted, watch, computed, inject } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed, inject } from 'vue'
 import axios from 'axios'
+import { useSleepException } from '@/composables/useSleepException'
 import {
     Card,
     CardContent,
@@ -103,6 +104,19 @@ const isLoadingMenu = ref(false)
 const selectedRecipe = ref(null)
 const isCookingMode = ref(false)
 const isAddingToList = ref({}) // Map: { uuid: true/false }
+
+// Keep the hub awake while the immersive cooking (fullscreen) mode is shown
+const { enableException, disableException } = useSleepException()
+watch(isCookingMode, (active) => {
+    if (active) {
+        enableException('cooking')
+    } else {
+        disableException('cooking')
+    }
+})
+onUnmounted(() => {
+    disableException('cooking')
+})
 
 // Scaling State
 const scaleFactor = ref(1.0)
