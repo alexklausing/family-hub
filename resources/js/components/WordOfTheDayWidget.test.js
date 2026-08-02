@@ -65,4 +65,25 @@ describe('WordOfTheDayWidget', () => {
         expect(audioMock.referrerPolicy).toBe('no-referrer')
         expect(audioMock.play).toHaveBeenCalledTimes(1)
     })
+
+    it('reorders languages in the settings dialog', async () => {
+        await wrapper.find('button').trigger('click')
+        await new Promise((r) => setTimeout(r, 0))
+
+        expect(document.body.textContent).toContain('Language Settings')
+
+        const rows = document.body.querySelectorAll('.language-row')
+        expect(rows.length).toBe(5)
+
+        const stored = JSON.parse(localStorage.getItem('word-of-day-language-order'))
+        expect(stored[0]).toBe('fr')
+
+        const reordered = [...stored]
+        reordered.splice(0, 0, reordered.pop())
+        localStorage.setItem('word-of-day-language-order', JSON.stringify(reordered))
+        await wrapper.vm.$nextTick()
+
+        const updated = JSON.parse(localStorage.getItem('word-of-day-language-order'))
+        expect(updated[0]).toBe('lb')
+    })
 })

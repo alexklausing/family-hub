@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { Globe, Settings, Check, Volume2 } from 'lucide-vue-next'
+import draggable from 'vuedraggable'
+import { Globe, Settings, Check, Volume2, GripVertical } from 'lucide-vue-next'
+import { useLongPress } from '@/composables/useLongPress'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -17,6 +19,9 @@ import { Label } from '@/components/ui/label'
 // Enabled languages state
 const enabledLanguages = useStorage('word-of-day-languages', ['fr', 'de', 'no', 'lb'])
 
+// Display order of languages (persisted, reorderable via long-press + drag)
+const languageOrder = useStorage('word-of-day-language-order', ['fr', 'de', 'no', 'es', 'lb'])
+
 const availableLanguages = [
     { id: 'fr', name: 'French', flag: '🇫🇷' },
     { id: 'de', name: 'German', flag: '🇩🇪' },
@@ -25,7 +30,19 @@ const availableLanguages = [
     { id: 'lb', name: 'Luxembourgish', flag: '🇱🇺' },
 ]
 
+// Languages sorted by the persisted order, with any newly added languages appended
+const orderedLanguages = computed(() => {
+    const ordered = languageOrder.value
+        .map((id) => availableLanguages.find((l) => l.id === id))
+        .filter(Boolean)
+    const rest = availableLanguages.filter(
+        (l) => !ordered.some((o) => o.id === l.id),
+    )
+    return [...ordered, ...rest]
+})
+
 const isSettingsOpen = ref(false)
+const isReorderMode = ref(false)
 
 const toggleLanguage = (langId) => {
     if (enabledLanguages.value.includes(langId)) {
@@ -33,6 +50,19 @@ const toggleLanguage = (langId) => {
     } else {
         enabledLanguages.value.push(langId)
     }
+}
+
+// Long-press a language to enter reorder mode; short tap toggles it
+const langHandlers = {}
+for (const lang of availableLanguages) {
+    langHandlers[lang.id] = useLongPress(
+        () => {
+            isReorderMode.value = true
+        },
+        () => {
+            toggleLanguage(lang.id)
+        },
+    )
 }
 
 // 31 days of phrases for a rotating schedule
@@ -153,7 +183,7 @@ const speak = (text, langId) => {
 
                 <!-- Translations -->
                 <div class="w-full flex flex-col gap-4">
-                    <template v-for="lang in availableLanguages" :key="lang.id">
+                    <template v-for="lang in orderedLanguages" :key="lang.id">
                         <div 
                             v-if="enabledLanguages.includes(lang.id)" 
                             class="flex flex-col items-center text-center cursor-pointer group hover:opacity-70 transition-all active:scale-95"
@@ -181,21 +211,63 @@ const speak = (text, langId) => {
                     </DialogDescription>
                 </DialogHeader>
 
-                <div class="grid gap-4 py-4">
-                    <div 
-                        v-for="lang in availableLanguages" 
-                        :key="lang.id"
-                        class="flex items-center justify-between p-4 rounded-[1.5rem] bg-white/40 dark:bg-white/5 border border-white/20 transition-colors"
-                        :class="{ 'ring-2 ring-primary bg-white/60 dark:bg-white/10': enabledLanguages.includes(lang.id) }"
-                        @click="toggleLanguage(lang.id)"
+                <div
+                    v-if="isReorderMode"
+                    class="flex items-center justify-between rounded-xl bg-primary/10 px-3 py-2 text-xs font-bold tracking-widest uppercase"
+                >
+                    <span>Drag to reorder</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        class="h-6 rounded-lg px-2 text-xs font-black uppercase"
+                        @click="isReorderMode = false"
                     >
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">{{ lang.flag }}</span>
-                            <Label class="text-base font-bold cursor-pointer">{{ lang.name }}</Label>
-                        </div>
-                        <Switch :checked="enabledLanguages.includes(lang.id)" />
-                    </div>
+                        Done
+                    </Button>
                 </div>
+                <p
+                    v-else
+                    class="text-[10px] font-bold tracking-widest uppercase italic opacity-40"
+                >
+                    Press &amp; hold a language to reorder
+                </p>
+
+                <draggable
+                    v-model="languageOrder"
+                    :item-key="(id) => id"
+                    :disabled="!isReorderMode"
+                    handle=".language-row"
+                    :animation="200"
+                    class="grid gap-4"
+                    @end="isReorderMode = false"
+                >
+                    <template #item="{ element: langId }">
+                        <div
+                            class="language-row flex items-center justify-between gap-3 rounded-[1.5rem] border border-white/20 bg-white/40 p-4 transition-colors dark:bg-white/5"
+                            :class="{
+                                'ring-2 ring-primary bg-white/60 dark:bg-white/10': enabledLanguages.includes(langId),
+                                'cursor-grab ring-1 ring-dashed ring-primary/40': isReorderMode,
+                                'cursor-pointer': !isReorderMode,
+                            }"
+                            v-bind="isReorderMode ? {} : langHandlers[langId]"
+                        >
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <GripVertical
+                                    v-if="isReorderMode"
+                                    class="text-muted-foreground h-5 w-5 shrink-0 opacity-60"
+                                />
+                                <span class="text-2xl">{{ availableLanguages.find((l) => l.id === langId)?.flag }}</span>
+                                <Label class="cursor-pointer truncate text-base font-bold">
+                                    {{ availableLanguages.find((l) => l.id === langId)?.name }}
+                                </Label>
+                            </div>
+                            <Switch
+                                v-if="!isReorderMode"
+                                :checked="enabledLanguages.includes(langId)"
+                            />
+                        </div>
+                    </template>
+                </draggable>
 
                 <DialogFooter>
                     <Button class="rounded-xl font-bold w-full" @click="isSettingsOpen = false">Done</Button>
