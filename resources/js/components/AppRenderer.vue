@@ -8,6 +8,7 @@ import AuraTab from './AuraTab.vue'
 import CountdownWidget from './CountdownWidget.vue'
 import UpNextWidget from './UpNextWidget.vue'
 import WordOfTheDayWidget from './WordOfTheDayWidget.vue'
+import CelebrationTab from './CelebrationTab.vue'
 
 const props = defineProps({
     appId: {
@@ -73,6 +74,8 @@ const emit = defineEmits([
         <UpNextWidget v-else-if="appId === 'up-next'" :scheduleEvents="scheduleEvents" class="h-full w-full" />
 
         <WordOfTheDayWidget v-else-if="appId === 'word-of-the-day'" />
+
+        <CelebrationTab v-else-if="appId === 'celebrations'" />
         
         <div v-else class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">
             Unknown App: {{ appId }}

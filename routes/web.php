@@ -35,6 +35,11 @@ Route::delete('/api/countdowns/{countdown}', [\App\Http\Controllers\CountdownCon
 
 Route::get('/api/aura', [\App\Http\Controllers\Api\AuraFramesController::class, 'index']);
 
+Route::get('/api/celebrations', [\App\Http\Controllers\CelebrationController::class, 'index']);
+Route::post('/api/celebrations', [\App\Http\Controllers\CelebrationController::class, 'store']);
+Route::put('/api/celebrations/{celebration}', [\App\Http\Controllers\CelebrationController::class, 'update']);
+Route::delete('/api/celebrations/{celebration}', [\App\Http\Controllers\CelebrationController::class, 'destroy']);
+
 Route::get('/api/recipes', [RecipeController::class, 'index']);
 Route::get('/api/recipes/categories', [RecipeController::class, 'categories']);
 Route::get('/api/recipes/menu', [RecipeController::class, 'menu']);

@@ -21,6 +21,7 @@ import {
     Pencil,
     Check,
     Moon,
+    PartyPopper,
 } from 'lucide-vue-next'
 import { useWeather } from '@/composables/useWeather'
 
@@ -95,6 +96,7 @@ const tabConfig = {
     shopping: { label: 'Shopping', icon: ShoppingBag },
     chores: { label: 'Chores', icon: CheckSquare },
     aura: { label: 'Aura', icon: ImageIcon },
+    celebrations: { label: 'Celebrations', icon: PartyPopper },
 }
 
 const currentTime = ref('')
