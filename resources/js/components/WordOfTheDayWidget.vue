@@ -157,7 +157,7 @@ const speak = (text, langId) => {
 </script>
 
 <template>
-    <div class="h-full w-full flex flex-col gap-3 mt-8">
+    <div class="h-full w-full flex flex-col gap-3 pt-8">
         <div class="flex items-center justify-between px-2">
             <h3 class="text-sm font-black tracking-widest uppercase text-black/40 dark:text-white/40 flex items-center gap-2">
                 <Globe class="h-4 w-4" />
@@ -168,7 +168,7 @@ const speak = (text, langId) => {
             </Button>
         </div>
 
-        <div class="flex-1 min-h-0 flex overflow-y-auto p-4">
+        <div class="flex-1 min-h-0 flex flex-col overflow-y-auto p-4">
             <div class="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white/50 dark:border-white/5 dark:bg-white/5 p-8 shadow-sm flex flex-col items-center gap-8 m-auto">
                 <!-- English Word -->
                 <div class="text-center cursor-pointer group hover:opacity-70 transition-all active:scale-95 flex flex-col items-center" @click="speak(currentWord.en, 'en')">
