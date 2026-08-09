@@ -10,6 +10,7 @@ import listPlugin from '@fullcalendar/list'
 import luxonPlugin from '@fullcalendar/luxon3'
 import { useLongPress } from '@/composables/useLongPress'
 import { useConfirm } from '@/composables/useConfirm'
+import { renderEventContent } from '@/lib/calendarEventContent'
 
 import {
     Dialog,
@@ -241,30 +242,7 @@ const calendarOptions = ref({
     editable: false,
     eventOrder: 'start,-duration,allDay,calendarOrder,title',
 
-    eventContent: (arg) => {
-        const timeText = arg.timeText
-        const title = arg.event.title
-        const isAllDay = arg.event.allDay
-
-        const container = document.createElement('div')
-        container.className =
-            'flex flex-col gap-0.5 leading-tight overflow-hidden py-0.5 px-1 text-white'
-
-        if (!isAllDay && timeText) {
-            const timeEl = document.createElement('div')
-            timeEl.className =
-                'text-[9px] font-black uppercase tracking-tighter opacity-80 mb-0.5'
-            timeEl.innerText = timeText
-            container.appendChild(timeEl)
-        }
-
-        const titleEl = document.createElement('div')
-        titleEl.className = 'font-bold text-[10px] truncate'
-        titleEl.innerText = title
-        container.appendChild(titleEl)
-
-        return { domNodes: [container] }
-    },
+    eventContent: renderEventContent,
 
     select: handleDateSelect,
     dateClick: handleDateClick,

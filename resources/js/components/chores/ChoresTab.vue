@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, computed, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import confetti from 'canvas-confetti'
 import axios from 'axios'
 import { useIdle } from '@vueuse/core'
@@ -66,6 +66,7 @@ const blankChore = () => ({
     title: '',
     profile: props.activeProfile,
     time: '',
+    available_from: '',
     days: [0, 1, 2, 3, 4, 5, 6],
     reward: '',
     is_bankable: true,
@@ -356,6 +357,7 @@ const clearReward = () => {
 const isLabelsModalOpen = ref(false)
 const isLabelFormOpen = ref(false)
 const newLabelName = ref('')
+const newLabelAvailableFrom = ref('')
 const newLabelReward = ref('')
 const newLabelIsBankable = ref(true)
 const labelRewardType = ref('monetary')
@@ -505,6 +507,10 @@ onMounted(() => {
     fetchChores()
     fetchLabels()
     loadRewardLibrary()
+})
+
+onUnmounted(() => {
+    if (clockTimer) clearInterval(clockTimer)
 })
 
 // ── Confetti ────────────────────────────────────────────────────────────────
@@ -712,6 +718,7 @@ const openEditModal = (chore) => {
         title: chore.title,
         profile: chore.profile,
         time: chore.time || '',
+        available_from: chore.available_from || '',
         days: chore.days || [0, 1, 2, 3, 4, 5, 6],
         reward: chore.reward || '',
         is_bankable: chore.is_bankable ?? true,
@@ -749,6 +756,7 @@ const openDuplicateModal = (chore) => {
         title: chore.title,
         profile: chore.profile,
         time: chore.time || '',
+        available_from: chore.available_from || '',
         days: chore.days ? [...chore.days] : [0, 1, 2, 3, 4, 5, 6],
         reward: chore.reward || '',
         is_bankable: chore.is_bankable ?? true,
@@ -769,6 +777,7 @@ const saveChore = async () => {
         const payload = {
             ...newChore.value,
             label_id: newChore.value.label_id || null,
+            available_from: newChore.value.available_from || null,
         }
 
         if (
@@ -950,6 +959,7 @@ const openLabelsModal = () => {
 const startCreateLabel = () => {
     editingLabel.value = null
     newLabelName.value = ''
+    newLabelAvailableFrom.value = ''
     decodeLabelReward('')
     newLabelIsBankable.value = true
     resetLabelBonusFields()
@@ -958,6 +968,7 @@ const startCreateLabel = () => {
 const startEditLabel = (label) => {
     editingLabel.value = label
     newLabelName.value = label.name
+    newLabelAvailableFrom.value = label.available_from || ''
     decodeLabelReward(label.reward)
     newLabelIsBankable.value = label.is_bankable ?? true
 
@@ -975,6 +986,7 @@ const startEditLabel = (label) => {
 }
 const cancelEditLabel = () => {
     newLabelName.value = ''
+    newLabelAvailableFrom.value = ''
     editingLabel.value = null
     decodeLabelReward('')
     newLabelIsBankable.value = true
@@ -985,6 +997,7 @@ const saveLabel = async () => {
     try {
         const payload = {
             name: newLabelName.value,
+            available_from: newLabelAvailableFrom.value || null,
             reward: newLabelReward.value || null,
             is_bankable: newLabelIsBankable.value,
         }
@@ -1048,9 +1061,57 @@ const rewardIsMonetary = (r) => r && /^\$/.test(r.trim())
 const formatRewardText = (r) => (r ? r.replace(/^\$/, '') : '')
 const getChoreReward = (chore) => chore.reward || chore.label?.reward || null
 
+// ── Availability (hide until) ───────────────────────────────────────────────
+const nowRef = ref(new Date())
+let clockTimer = null
+const clockMinutes = (t) => {
+    if (!t) return null
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + (m || 0)
+}
+// The chore is hidden until the later of its own and its label's available_from.
+const effectiveAvailableFrom = (chore) => {
+    const times = [chore.available_from, chore.label?.available_from]
+        .filter(Boolean)
+        .sort()
+    return times.length ? times[times.length - 1] : null
+}
+const isChoreAvailable = (chore) => {
+    const unlock = effectiveAvailableFrom(chore)
+    if (!unlock) return true
+    const now = nowRef.value
+    return now.getHours() * 60 + now.getMinutes() >= clockMinutes(unlock)
+}
+const hiddenChoreCount = computed(() => {
+    const day = nowRef.value.getDay()
+    return chores.value.filter(
+        (c) =>
+            (!c.days || c.days.includes(day)) && !isChoreAvailable(c),
+    ).length
+})
+// Only run a clock while something is hidden, so the board reveals chores
+// at their unlock minute without a page reload.
+watch(
+    hiddenChoreCount,
+    (n) => {
+        if (n > 0 && !clockTimer) {
+            clockTimer = setInterval(() => {
+                nowRef.value = new Date()
+            }, 30000)
+        } else if (n === 0 && clockTimer) {
+            clearInterval(clockTimer)
+            clockTimer = null
+        }
+    },
+    { immediate: true },
+)
+
 const todaysChores = computed(() => {
-    const day = new Date().getDay()
-    return chores.value.filter((c) => !c.days || c.days.includes(day))
+    const day = nowRef.value.getDay()
+    return chores.value.filter(
+        (c) =>
+            (!c.days || c.days.includes(day)) && isChoreAvailable(c),
+    )
 })
 
 // Grouped by label — labelled groups first (ordered by first chore's order),
@@ -2391,6 +2452,45 @@ watch(
                         </div>
                     </div>
 
+                    <!-- Available From (hide until) -->
+                    <div class="grid gap-1.5">
+                        <label
+                            class="flex items-center justify-between text-sm font-bold"
+                        >
+                            <span>
+                                Don't show until
+                                <span class="font-normal opacity-50"
+                                    >(Optional)</span
+                                >
+                            </span>
+                            <button
+                                v-if="newChore.available_from"
+                                type="button"
+                                @click="newChore.available_from = ''"
+                                class="text-xs font-bold text-red-500 transition-colors hover:text-red-600"
+                            >
+                                Clear Time
+                            </button>
+                        </label>
+                        <Input
+                            v-model="newChore.available_from"
+                            type="time"
+                            class="h-11"
+                        />
+                        <p
+                            v-if="
+                                selectedLabel &&
+                                selectedLabel.available_from
+                            "
+                            class="text-xs font-semibold opacity-60"
+                        >
+                            Its group "{{
+                                selectedLabel.name
+                            }}" unlocks at
+                            {{ formatTime(selectedLabel.available_from) }}.
+                        </p>
+                    </div>
+
                     <!-- Subtasks / Steps -->
                     <div class="grid gap-1.5">
                         <label
@@ -2523,6 +2623,14 @@ watch(
                                     />
                                     {{ formatRewardText(label.reward) }}
                                 </div>
+                                <div
+                                    v-if="label.available_from"
+                                    class="mt-0.5 flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400"
+                                >
+                                    <Clock class="h-3 w-3" />
+                                    Unlocks at
+                                    {{ formatTime(label.available_from) }}
+                                </div>
                             </div>
                             <div class="flex shrink-0 gap-1">
                                 <Button
@@ -2582,6 +2690,38 @@ watch(
                             v-model="newLabelName"
                             placeholder="Label name"
                         />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-bold"
+                            >Don't show until
+                            <span class="font-normal opacity-50"
+                                >(Optional)</span
+                            ></label
+                        >
+                        <div class="flex items-center gap-2">
+                            <Input
+                                v-model="newLabelAvailableFrom"
+                                type="time"
+                                class="h-10 flex-1"
+                            />
+                            <Button
+                                v-if="newLabelAvailableFrom"
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                class="h-10 w-10 shrink-0 rounded-full text-red-500"
+                                @click="newLabelAvailableFrom = ''"
+                            >
+                                <X class="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <p
+                            class="text-muted-foreground text-xs"
+                        >
+                            All chores in this group stay hidden until this
+                            time.
+                        </p>
                     </div>
 
                     <div class="space-y-2">

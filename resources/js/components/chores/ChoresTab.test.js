@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import ChoresTab from './ChoresTab.vue'
 import axios from 'axios'
 import confetti from 'canvas-confetti'
@@ -704,5 +704,162 @@ describe('ChoresTab', () => {
 
         wrapper.vm.removeSubtask(1)
         expect(wrapper.vm.newChore.subtasks).toHaveLength(1)
+    })
+
+    it('hides a chore until its available_from time passes', async () => {
+        mockChores[0].available_from = '15:00'
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+        await wrapper.vm.$nextTick()
+
+        // Before unlock the chore is absent from today's board
+        wrapper.vm.nowRef = new Date('2026-08-03T09:00:00')
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 1)).toBeUndefined()
+        expect(wrapper.text()).not.toContain('Wash dishes')
+
+        // After unlock it appears
+        wrapper.vm.nowRef = new Date('2026-08-03T15:30:00')
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 1)?.title).toBe(
+            'Wash dishes',
+        )
+        expect(wrapper.text()).toContain('Wash dishes')
+    })
+
+    it('hides all chores in a label group with a future available_from', async () => {
+        mockLabels[0].available_from = '15:00'
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+        await wrapper.vm.$nextTick()
+
+        wrapper.vm.nowRef = new Date('2026-08-03T09:00:00')
+        await wrapper.vm.$nextTick()
+
+        // Both chores under label 1 (Kitchen) are hidden; label 2 chore stays
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 1)).toBeUndefined()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 2)).toBeUndefined()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 3)?.title).toBe(
+            'Make bed',
+        )
+    })
+
+    it('uses the later of chore and label available_from', async () => {
+        mockChores[0].available_from = '17:00'
+        mockLabels[0].available_from = '15:00'
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+        await wrapper.vm.$nextTick()
+
+        // 16:00 is after the label unlock but before the chore's own -> hidden
+        wrapper.vm.nowRef = new Date('2026-08-03T16:00:00')
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 1)).toBeUndefined()
+
+        // 17:30 is past both -> visible
+        wrapper.vm.nowRef = new Date('2026-08-03T17:30:00')
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.todaysChores.find((c) => c.id === 1)?.title).toBe(
+            'Wash dishes',
+        )
+    })
+
+    it('saves available_from from the chore editor modal', async () => {
+        axios.post.mockResolvedValue({
+            data: { id: 9, title: 'New chore', available_from: '15:30' },
+        })
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+
+        wrapper.vm.openAddModal()
+        wrapper.vm.newChore.title = 'Screen time'
+        wrapper.vm.newChore.available_from = '15:30'
+
+        await wrapper.vm.saveChore()
+
+        expect(axios.post).toHaveBeenCalledWith(
+            '/api/chores',
+            expect.objectContaining({
+                title: 'Screen time',
+                available_from: '15:30',
+            }),
+        )
+    })
+
+    it('loads available_from when editing a chore', async () => {
+        const choreWithUnlock = {
+            ...mockChores[0],
+            available_from: '14:00',
+        }
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+
+        wrapper.vm.openEditModal(choreWithUnlock)
+        expect(wrapper.vm.newChore.available_from).toBe('14:00')
+    })
+
+    it('saves available_from when creating a label', async () => {
+        axios.post.mockResolvedValue({
+            data: { id: 3, name: 'Screen Time', available_from: '15:30' },
+        })
+
+        wrapper = mount(ChoresTab, {
+            props: {
+                profiles: [{ name: 'Alex', icon: 'User' }],
+                activeProfile: 'Alex',
+            },
+        })
+
+        await flushPromises()
+
+        wrapper.vm.startCreateLabel()
+        wrapper.vm.newLabelName = 'Screen Time'
+        wrapper.vm.newLabelAvailableFrom = '15:30'
+
+        await wrapper.vm.$nextTick()
+        await wrapper.vm.saveLabel()
+
+        expect(axios.post).toHaveBeenCalledWith(
+            '/api/labels',
+            expect.objectContaining({
+                name: 'Screen Time',
+                available_from: '15:30',
+            }),
+        )
     })
 })

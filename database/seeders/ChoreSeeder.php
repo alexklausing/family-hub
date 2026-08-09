@@ -94,10 +94,8 @@ class ChoreSeeder extends Seeder
 
         $emilyChores = [
             // Morning Routine group (reward: $0.50)
-            ['title' => 'Make bed',              'time' => '07:30', 'days' => self::EVERY_DAY,   'label_id' => $morningRoutine->id, 'reward' => null],
-            ['title' => 'Get dressed',           'time' => '07:45', 'days' => self::EVERY_DAY,   'label_id' => $morningRoutine->id, 'reward' => null],
-            ['title' => 'Brush teeth (morning)', 'time' => '07:50', 'days' => self::EVERY_DAY,   'label_id' => $morningRoutine->id, 'reward' => null],
-            ['title' => 'Eat breakfast',         'time' => '08:00', 'days' => self::EVERY_DAY,   'label_id' => $morningRoutine->id, 'reward' => null],
+            ['title' => 'Get ready for school',              'time' => '07:30', 'days' => self::EVERY_DAY,   'label_id' => $morningRoutine->id, 'reward' => null],
+                'subtasks' => ['Pick up toys & clothes', 'Dust surfaces', 'Vacuum the floor']],
 
             // Screen Time List group (reward: 30 min screen time)
             ['title' => 'Feed the cat',          'time' => '16:00', 'days' => self::EVERY_DAY,   'label_id' => $screenTimeList->id, 'reward' => null],

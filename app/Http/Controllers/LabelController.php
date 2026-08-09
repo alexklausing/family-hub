@@ -16,6 +16,7 @@ class LabelController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:labels,name',
+            'available_from' => 'nullable|string|max:10',
             'reward' => 'nullable|string|max:255',
             'is_bankable' => 'boolean',
             'bonus_reward' => 'nullable|array',
@@ -44,6 +45,7 @@ class LabelController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255|unique:labels,name,'.$label->id,
+            'available_from' => 'nullable|string|max:10',
             'reward' => 'nullable|string|max:255',
             'is_bankable' => 'boolean',
             'bonus_reward' => 'nullable|array',

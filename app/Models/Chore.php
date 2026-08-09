@@ -10,6 +10,7 @@ class Chore extends Model
         'title',
         'profile',
         'time',
+        'available_from',
         'days',
         'is_active',
         'order',

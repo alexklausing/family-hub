@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Label extends Model
 {
-    protected $fillable = ['name', 'reward', 'is_bankable'];
+    protected $fillable = ['name', 'available_from', 'reward', 'is_bankable'];
 
     protected $casts = [
         'is_bankable' => 'boolean',

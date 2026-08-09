@@ -48,6 +48,7 @@ class ChoreController extends Controller
             'title' => 'required|string|max:255',
             'profile' => 'required|string|max:255',
             'time' => 'nullable|string|max:10',
+            'available_from' => 'nullable|string|max:10',
             'days' => 'nullable|array',
             'days.*' => 'integer|min:0|max:6',
             'is_active' => 'boolean',
@@ -91,6 +92,7 @@ class ChoreController extends Controller
             'title' => 'sometimes|string|max:255',
             'profile' => 'sometimes|string|max:255',
             'time' => 'nullable|string|max:10',
+            'available_from' => 'nullable|string|max:10',
             'days' => 'nullable|array',
             'days.*' => 'integer|min:0|max:6',
             'is_active' => 'boolean',
@@ -152,6 +154,12 @@ class ChoreController extends Controller
 
         $date = $validated['date'];
         $chore->loadMissing(['label', 'subtasks']);
+
+        if ($this->choreIsLocked($chore, $date)) {
+            return response()->json([
+                'message' => 'This chore is not available yet.',
+            ], 403);
+        }
 
         // Chores without subtasks keep the original toggle semantics:
         // a bare request toggles completion on/off.
@@ -225,6 +233,29 @@ class ChoreController extends Controller
             'completed' => $allDone,
             'progress' => $progress,
         ]);
+    }
+
+    /**
+     * Whether a chore is hidden/locked until a time-of-day. The effective
+     * unlock is the later of the chore's and its label's available_from.
+     */
+    private function choreIsLocked(Chore $chore, string $date): bool
+    {
+        if (Carbon::parse($date)->toDateString() !== Carbon::now()->toDateString()) {
+            return false;
+        }
+
+        $times = collect([$chore->available_from, $chore->label?->available_from])
+            ->filter()
+            ->values();
+
+        if ($times->isEmpty()) {
+            return false;
+        }
+
+        $latest = $times->sortDesc()->first();
+
+        return Carbon::now()->format('H:i') < $latest;
     }
 
     /**
@@ -494,6 +525,7 @@ class ChoreController extends Controller
                 'title' => $source->title,
                 'profile' => $toProfile,
                 'time' => $source->time,
+                'available_from' => $source->available_from,
                 'days' => $source->days,
                 'reward' => $source->reward,
                 'is_bankable' => $source->is_bankable,
