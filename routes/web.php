@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CalendarManagementController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
+use App\Http\Controllers\Api\LunchMenuController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\RewardLedgerController;
@@ -27,6 +28,8 @@ Route::post('/api/profiles/{name}/visible-calendars', [CalendarManagementControl
 
 
 Route::get('/api/weather', [WeatherController::class, 'index']);
+
+Route::get('/api/lunch-menu', [LunchMenuController::class, 'index']);
 
 Route::get('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'index']);
 Route::post('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'store']);

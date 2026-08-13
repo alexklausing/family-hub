@@ -9,6 +9,7 @@ import CountdownWidget from './CountdownWidget.vue'
 import UpNextWidget from './UpNextWidget.vue'
 import WordOfTheDayWidget from './WordOfTheDayWidget.vue'
 import CelebrationTab from './CelebrationTab.vue'
+import LunchMenu from './LunchMenu.vue'
 
 const props = defineProps({
     appId: {
@@ -76,7 +77,9 @@ const emit = defineEmits([
         <WordOfTheDayWidget v-else-if="appId === 'word-of-the-day'" />
 
         <CelebrationTab v-else-if="appId === 'celebrations'" />
-        
+
+        <LunchMenu v-else-if="appId === 'lunch-menu'" />
+
         <div v-else class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">
             Unknown App: {{ appId }}
         </div>

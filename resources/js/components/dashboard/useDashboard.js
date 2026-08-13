@@ -32,7 +32,7 @@ export function useDashboard() {
     })
 
     const getAppName = (id) => {
-        const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura' }
+        const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura', 'lunch-menu': 'School Lunch' }
         return names[id] || id
     }
 

@@ -63,6 +63,12 @@ return [
         'lon' => env('LONGITUDE'),
     ],
 
+    'nutrislice' => [
+        'tenant' => env('NUTRISLICE_TENANT', 'polk-fl'),
+        'school' => env('NUTRISLICE_SCHOOL', 'lakeland-montessori'),
+        'school_name' => env('NUTRISLICE_SCHOOL_NAME', 'Lakeland Montessori'),
+    ],
+
     'paprika' => [
         'email' => env('PAPRIKA_EMAIL'),
         'password' => env('PAPRIKA_PASSWORD'),
