@@ -1,7 +1,9 @@
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 
 export function useDashboard() {
+    // Guards against stale in-flight responses clobbering newer ones.
+    let fetchSequence = 0
     // UI State
     const isSettingsDialogOpen = ref(false)
     const isSyncModalOpen = ref(false)
@@ -204,7 +206,24 @@ export function useDashboard() {
         )
     })
 
+    const mergeEvents = (existing, incoming) => {
+        // Union windowed responses into what's already loaded so browsing a
+        // narrow range never blanks calendars that had events elsewhere.
+        // Incoming wins for duplicate ids so updated events replace stale ones.
+        const merged = new Map()
+        for (const event of incoming) {
+            merged.set(event.id, event)
+        }
+        for (const event of existing) {
+            if (!merged.has(event.id)) {
+                merged.set(event.id, event)
+            }
+        }
+        return [...merged.values()]
+    }
+
     const fetchEvents = async (start = null, end = null) => {
+        const seq = ++fetchSequence
         isLoading.value = true
         try {
             const response = await axios.get('/api/events', {
@@ -214,7 +233,14 @@ export function useDashboard() {
                     end,
                 },
             })
-            allEvents.value = response.data.events
+
+            // A newer request superseded this one; discard the stale response.
+            if (seq !== fetchSequence) return
+
+            allEvents.value =
+                !start && !end
+                    ? response.data.events
+                    : mergeEvents(allEvents.value, response.data.events)
 
             let fetchedCalendars = response.data.calendars
             if (calendarOrder.value.length > 0) {
@@ -239,7 +265,14 @@ export function useDashboard() {
             if (dbProfiles) {
                 dbProfiles.forEach((p) => {
                     if (p.visible_calendars !== null) {
-                        filtersByProfile.value[p.name] = p.visible_calendars.map(Number)
+                        const local = filtersByProfile.value[p.name]
+                        // Seed a profile's visibility from the backend only the
+                        // first time we see it locally. Afterwards local wins,
+                        // so a slow response can't clobber a user's toggle.
+                        if (local === undefined) {
+                            filtersByProfile.value[p.name] =
+                                p.visible_calendars.map(Number)
+                        }
                     } else if (p.name === activeProfile.value) {
                         profileWasNull = true
                     }
@@ -249,7 +282,7 @@ export function useDashboard() {
             // Automatically enable newly added calendars
             const knownIds = filtersByProfile.value[activeProfile.value] || []
             const fetchedIds = availableCalendars.value.map((c) => Number(c.id))
-            
+
             if (profileWasNull && knownIds.length === 0) {
                 // First time ever loading this profile, enable all
                 filtersByProfile.value[activeProfile.value] = fetchedIds
@@ -274,13 +307,17 @@ export function useDashboard() {
                         params: { profile: activeProfile.value },
                     })
                     .then((res) => {
-                        scheduleEvents.value = res.data.events
+                        if (seq === fetchSequence) {
+                            scheduleEvents.value = res.data.events
+                        }
                     })
             }
         } catch (error) {
             console.error('Failed to fetch events:', error)
         } finally {
-            isLoading.value = false
+            if (seq === fetchSequence) {
+                isLoading.value = false
+            }
         }
     }
 
@@ -331,17 +368,61 @@ export function useDashboard() {
             } else {
                 await axios.post('/api/sync/calendars')
             }
-            await fetchEvents()
         } catch (error) {
             console.error('Sync failed:', error)
-        } finally {
-            isSyncing.value = false
         }
+        // Always refresh from the cache afterwards, even if the sync call
+        // itself failed, so the grid reflects the latest synced data.
+        await fetchEvents()
+        isSyncing.value = false
+    }
+
+    let resumeTimer = null
+    let lastRefreshAt = 0
+
+    const refreshEventsIfStale = () => {
+        // Debounce bursts (initial visibilitychange + focus + pageshow can
+        // all fire within the same second) and space hard refreshes out.
+        const now = Date.now()
+        if (now - lastRefreshAt < 3000) return
+        lastRefreshAt = now
+        if (resumeTimer) clearTimeout(resumeTimer)
+        resumeTimer = setTimeout(() => fetchEvents(), 500)
+    }
+
+    const handleVisibilityChange = () => {
+        // Returning to a hidden tab / waking the kiosk: pull fresh data
+        // instead of leaving the grid stuck in a stale or partial state.
+        if (!document.hidden) refreshEventsIfStale()
+    }
+
+    const handleFocus = () => {
+        if (!document.hidden) refreshEventsIfStale()
+    }
+
+    const handlePageShow = (event) => {
+        // ~persisted: page restored from the bfcache without a new load.
+        if (event.persisted) refreshEventsIfStale()
     }
 
     onMounted(() => {
         loadFilters()
+        lastRefreshAt = Date.now()
         fetchEvents()
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('focus', handleFocus)
+        window.addEventListener('pageshow', handlePageShow)
+    })
+
+    onUnmounted(() => {
+        if (resumeTimer) clearTimeout(resumeTimer)
+        document.removeEventListener(
+            'visibilitychange',
+            handleVisibilityChange,
+        )
+        window.removeEventListener('focus', handleFocus)
+        window.removeEventListener('pageshow', handlePageShow)
     })
 
     watch(activeProfile, () => {

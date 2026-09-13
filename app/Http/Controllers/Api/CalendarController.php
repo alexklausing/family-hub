@@ -9,6 +9,7 @@ use App\Models\Profile;
 use App\Services\Calendar\CalendarManager;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 
 class CalendarController extends Controller
@@ -26,6 +27,13 @@ class CalendarController extends Controller
             // but in a large production app, this should be a job.
             $this->calendarManager->syncCalendar($calendar);
         }
+
+        return response()->json(['message' => 'Sync complete']);
+    }
+
+    public function syncAll()
+    {
+        Artisan::call('sync:all');
 
         return response()->json(['message' => 'Sync complete']);
     }

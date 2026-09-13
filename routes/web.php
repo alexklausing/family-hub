@@ -18,6 +18,7 @@ Route::get('/', function () {
 
 Route::get('/api/events', [CalendarController::class, 'index']);
 Route::post('/api/sync/calendars', [CalendarController::class, 'sync']);
+Route::post('/api/sync/all', [CalendarController::class, 'syncAll']);
 Route::post('/api/calendars/{calendar}/events', [CalendarController::class, 'storeEvent']);
 Route::post('/api/calendars/apple/fetch', [CalendarManagementController::class, 'fetchAppleCalendars']);
 Route::post('/api/calendars', [CalendarManagementController::class, 'store']);
