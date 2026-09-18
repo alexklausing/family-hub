@@ -60,7 +60,7 @@ test:
 # Run Static Analysis (PHPStan)
 stan:
 	@echo "🧐 Running PHPStan..."
-	$(SAIL_CMD) phpstan analyse
+	$(SAIL_CMD) php -d memory_limit=-1 vendor/bin/phpstan analyse --memory-limit=-1
 
 # Run Linting (Pint)
 lint:

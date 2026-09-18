@@ -10,6 +10,8 @@ import UpNextWidget from './UpNextWidget.vue'
 import WordOfTheDayWidget from './WordOfTheDayWidget.vue'
 import CelebrationTab from './CelebrationTab.vue'
 import LunchMenu from './LunchMenu.vue'
+import CommuteTab from './commute/CommuteTab.vue'
+import CommuteWidget from './commute/CommuteWidget.vue'
 
 const props = defineProps({
     appId: {
@@ -79,6 +81,10 @@ const emit = defineEmits([
         <CelebrationTab v-else-if="appId === 'celebrations'" />
 
         <LunchMenu v-else-if="appId === 'lunch-menu'" />
+
+        <CommuteTab v-else-if="appId === 'commute'" />
+
+        <CommuteWidget v-else-if="appId === 'commute-widget'" class="h-full w-full" />
 
         <div v-else class="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">
             Unknown App: {{ appId }}

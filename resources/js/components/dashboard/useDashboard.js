@@ -33,14 +33,39 @@ export function useDashboard() {
         on: '07:00'
     })
 
+    // Home Address (shared with Commute app). Pre-seeded with the family home
+    // so the Commute app works out of the box.
+    const DEFAULT_HOME_ADDRESS = {
+        address: '1271 Evergreen Park Circle, Lakeland, FL 33813',
+        lat: 27.9487506,
+        lon: -81.9417946,
+    }
+    const homeAddress = ref({ ...DEFAULT_HOME_ADDRESS })
+
     const getAppName = (id) => {
-        const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura', 'lunch-menu': 'School Lunch' }
+        const names = { family: 'Calendar', weather: 'Weather', recipes: 'Recipes', shopping: 'Shopping', chores: 'Chores', aura: 'Aura', 'lunch-menu': 'School Lunch', commute: 'Commute' }
         return names[id] || id
     }
 
     const unusedApps = ref([])
 
     const loadFilters = () => {
+        // Load the stored home address up front so later saveFilters() calls
+        // (workspace migration, unused apps) can't overwrite it with the seed.
+        const savedHome = localStorage.getItem('dashboard_home_address')
+        if (savedHome) {
+            try {
+                const parsed = JSON.parse(savedHome)
+                // Ignore empty persisted values so a never-configured install
+                // keeps the auto-seeded default home address.
+                if (parsed.address || parsed.lat) {
+                    homeAddress.value = { address: '', lat: null, lon: null, ...parsed }
+                }
+            } catch (e) {
+                // Corrupt data — keep default
+            }
+        }
+
         const savedWorkspaces = localStorage.getItem('dashboard_workspaces')
         if (savedWorkspaces) {
             try {
@@ -57,6 +82,11 @@ export function useDashboard() {
                 } else {
                     workspaces.value = parsed
                 }
+                // Commute is a standalone app (launched from Other Apps), never a tab.
+                workspaces.value = workspaces.value
+                    .map((ws) => ({ ...ws, apps: (ws.apps || []).filter((id) => id !== 'commute' && id !== 'commute-widget') }))
+                    .filter((ws) => ws.apps.length > 0)
+                if (workspaces.value.length !== parsed.length) saveFilters()
             } catch (e) {
                 console.error(e)
             }
@@ -121,9 +151,15 @@ export function useDashboard() {
             'dashboard_monitor_settings',
             JSON.stringify(monitorSettings.value)
         )
+        localStorage.setItem(
+            'dashboard_home_address',
+            JSON.stringify(homeAddress.value)
+        )
     }
 
     const createWorkspace = (appId) => {
+        // Commute lives only in the Others app library — never as its own tab.
+        if (appId === 'commute') return null
         const newWs = {
             id: 'ws_' + Math.random().toString(36).substring(2, 9),
             name: getAppName(appId),
@@ -458,6 +494,7 @@ export function useDashboard() {
         resetWorkspaces,
         unusedApps,
         toggleAppActive,
-        monitorSettings
+        monitorSettings,
+        homeAddress
     }
 }

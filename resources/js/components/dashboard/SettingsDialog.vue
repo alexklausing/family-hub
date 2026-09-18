@@ -10,7 +10,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { useConfirm } from '@/composables/useConfirm'
-import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid, Palette } from 'lucide-vue-next'
+import { Lock, Unlock, RefreshCw, ChevronRight, Moon, Sun, Monitor, Globe, Map, Code, LayoutGrid, Palette, Home, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
     open: {
@@ -58,6 +58,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    homeAddress: {
+        type: Object,
+        required: true,
+    },
 })
 
 const emit = defineEmits([
@@ -72,6 +76,7 @@ const emit = defineEmits([
     'update:isEditingLayouts',
     'update:continuousRecipeScroll',
     'update:monitorSettings',
+    'update:homeAddress',
     'open-sync',
     'reset-layouts',
     'sleep-now'
@@ -138,6 +143,37 @@ const monitorSettingsData = computed({
     get: () => props.monitorSettings,
     set: (val) => emit('update:monitorSettings', val),
 })
+
+const homeData = computed({
+    get: () => props.homeAddress,
+    set: (val) => emit('update:homeAddress', val),
+})
+
+const homeAddressInput = ref(props.homeAddress.address || '')
+const isGeocoding = ref(false)
+const geocodeMessage = ref('')
+
+const saveHomeAddress = async () => {
+    const addr = homeAddressInput.value.trim()
+    if (!addr) return
+
+    isGeocoding.value = true
+    geocodeMessage.value = ''
+    try {
+        const res = await axios.post('/api/commute/geocode', { address: addr })
+        homeData.value = {
+            address: addr,
+            lat: res.data.lat,
+            lon: res.data.lon,
+        }
+        geocodeMessage.value = '✓ Location saved'
+    } catch (e) {
+        geocodeMessage.value = '✗ Could not find that address'
+    } finally {
+        isGeocoding.value = false
+        setTimeout(() => (geocodeMessage.value = ''), 3000)
+    }
+}
 
 const { confirmAsync } = useConfirm()
 
@@ -303,6 +339,43 @@ const refreshKiosk = async () => {
                                     </div>
                                 </div>
                                 <Switch :checked="continuousScroll" @update:checked="val => continuousScroll = val" />
+                            </div>
+                        </div>
+
+                        <div class="bg-muted/20 flex flex-col justify-between rounded-[2rem] border border-white/5 p-8">
+                            <div class="mb-6 flex items-center gap-5">
+                                <div class="bg-primary/20 text-primary flex h-14 w-14 items-center justify-center rounded-2xl shrink-0">
+                                    <Home class="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <h4 class="text-xl font-black tracking-tight">Home Address</h4>
+                                    <p class="text-[10px] font-bold tracking-widest uppercase opacity-40">Used by the Commute app for travel routes</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-3">
+                                <input
+                                    v-model="homeAddressInput"
+                                    type="text"
+                                    placeholder="e.g. 1271 Evergreen Park Cir, Lakeland, FL 33813"
+                                    class="bg-primary/10 text-primary focus:ring-primary/50 h-14 w-full rounded-2xl border-none px-4 text-sm font-bold outline-none focus:ring-2"
+                                />
+                                <div class="flex items-center gap-3">
+                                    <Button
+                                        @click="saveHomeAddress"
+                                        :disabled="isGeocoding || !homeAddressInput.trim()"
+                                        class="h-12 rounded-xl px-6 font-bold"
+                                    >
+                                        <Loader2 v-if="isGeocoding" class="w-4 h-4 animate-spin mr-2" />
+                                        Save Location
+                                    </Button>
+                                    <span
+                                        v-if="geocodeMessage || (homeData.address && homeData.lat)"
+                                        class="text-sm font-bold opacity-70"
+                                        :class="geocodeMessage?.startsWith('✓') ? 'text-green-500' : geocodeMessage?.startsWith('✗') ? 'text-red-500' : ''"
+                                    >
+                                        {{ geocodeMessage || (homeData.address ? 'Current: ' + homeData.address : '') }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>

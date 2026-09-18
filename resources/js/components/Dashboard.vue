@@ -49,7 +49,8 @@ const {
     resetWorkspaces,
     unusedApps,
     toggleAppActive,
-    monitorSettings
+    monitorSettings,
+    homeAddress
 } = useDashboard()
 
 const activeTab = ref(workspaces.value?.[0]?.id || 'other')
@@ -67,6 +68,7 @@ const goToSleep = () => {
 
 const weatherView = ref('weather')
 provide('weatherView', weatherView)
+provide('homeAddress', homeAddress)
 
 watch(isSleeping, (newVal) => {
     axios.post('/api/monitor/state', { state: newVal ? 'sleep' : 'wake' }).catch(console.error)
@@ -584,7 +586,7 @@ const handleCycleLayout = (workspace) => {
                         @toggle-active="toggleAppActive"
                         @create-workspace="(appId) => {
                             const newWs = createWorkspace(appId);
-                            activeTab = newWs.id;
+                            if (newWs) activeTab = newWs.id;
                         }"
                         @remove-workspace="removeWorkspace"
                         @launch="handleAppLaunch"
@@ -605,11 +607,13 @@ const handleCycleLayout = (workspace) => {
             v-model:isEditingLayouts="isEditingLayouts"
             v-model:continuousRecipeScroll="continuousRecipeScroll"
             v-model:monitorSettings="monitorSettings"
+            v-model:homeAddress="homeAddress"
             :isSyncing="isSyncing"
             @open-sync="handleOpenSync"
             @update:localTimezone="saveFilters"
             @update:timeOffset="saveFilters"
             @update:monitorSettings="saveFilters"
+            @update:homeAddress="saveFilters"
             @sleep-now="goToSleep"
             @reset-layouts="() => { resetWorkspaces(); activeTab = workspaces[0]?.id || 'other'; }"
         />

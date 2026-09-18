@@ -44,6 +44,9 @@ class DatabaseSeeder extends Seeder
         // Seed Celebrations
         $this->call(CelebrationSeeder::class);
 
+        // Seed Commute Destinations
+        $this->call(CommuteDestinationSeeder::class);
+
         // Trigger Synchronous Syncs
         $this->command->info('Starting initial Paprika recipe sync...');
         try {

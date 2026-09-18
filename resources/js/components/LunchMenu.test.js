@@ -5,21 +5,40 @@ import axios from 'axios'
 
 vi.mock('axios')
 
+const formatYMD = (date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
+// Build the sample week relative to today's Monday so the test
+// stays valid regardless of when it runs.
+const start = new Date()
+start.setHours(0, 0, 0, 0)
+start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+const weekStart = formatYMD(start)
+const dayAt = (offset) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + offset)
+    return formatYMD(d)
+}
+
 const sampleWeek = {
     school: 'Lakeland Montessori',
-    start_date: '2026-08-10',
+    start_date: weekStart,
     days: [
-        { date: '2026-08-10', has_school: false, sections: [] },
+        { date: dayAt(0), has_school: false, sections: [] },
         {
-            date: '2026-08-11',
+            date: dayAt(1),
             sections: [
                 { name: 'Hot Meal:', items: ['Chicken and Waffles E'] },
                 { name: 'Fruit of the Day:', items: ['Red Apple Slices'] },
             ],
         },
-        { date: '2026-08-12', sections: [] },
-        { date: '2026-08-13', sections: [] },
-        { date: '2026-08-14', sections: [] },
+        { date: dayAt(2), sections: [] },
+        { date: dayAt(3), sections: [] },
+        { date: dayAt(4), sections: [] },
     ],
 }
 

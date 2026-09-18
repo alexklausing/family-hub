@@ -82,4 +82,8 @@ return [
         'subscriptions' => env('CALENDAR_SUBSCRIPTIONS'),
     ],
 
+    'tomtom' => [
+        'key' => env('TOMTOM_API_KEY'),
+    ],
+
 ];

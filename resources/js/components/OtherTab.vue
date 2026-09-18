@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, CheckCircle2, Minus, Plus, Clock, Globe, PartyPopper, Utensils } from 'lucide-vue-next'
+import { Calendar, CloudSun, ChefHat, ShoppingBag, CheckSquare, ImageIcon, Pin, MapPin, CheckCircle2, Minus, Plus, Clock, Globe, PartyPopper, Utensils, Car } from 'lucide-vue-next'
 
 const props = defineProps({
     workspaces: {
@@ -89,6 +89,12 @@ const allApps = [
         name: 'School Lunch',
         icon: Utensils,
         color: 'bg-orange-500',
+    },
+    {
+        id: 'commute',
+        name: 'Commute',
+        icon: Car,
+        color: 'bg-sky-500',
     }
 ]
 
@@ -104,7 +110,16 @@ const isAppPinned = (appId) => {
     return !!getDedicatedWorkspace(appId)
 }
 
+// Apps that live only in the App Library and can never be pinned as their own tab.
+const unpinnableApps = ['commute']
+
 const handleAppClick = (appId) => {
+    // Commute only ever launches as a temporary view from the library — it can
+    // never be pinned to a tab or dropped into a workspace slot while editing.
+    if (unpinnableApps.includes(appId)) {
+        if (!props.isEditing) emit('launch', appId)
+        return
+    }
     if (props.isEditing && !props.isAddingToSlot) {
         if ('vibrate' in navigator) navigator.vibrate(50) // Haptic feedback if available
         const ws = getDedicatedWorkspace(appId)

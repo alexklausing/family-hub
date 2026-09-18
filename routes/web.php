@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\CalendarManagementController;
+use App\Http\Controllers\Api\CommuteController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
@@ -31,6 +32,14 @@ Route::post('/api/profiles/{name}/visible-calendars', [CalendarManagementControl
 Route::get('/api/weather', [WeatherController::class, 'index']);
 
 Route::get('/api/lunch-menu', [LunchMenuController::class, 'index']);
+
+Route::get('/api/commute/destinations', [CommuteController::class, 'destinations']);
+Route::post('/api/commute/destinations', [CommuteController::class, 'storeDestination']);
+Route::put('/api/commute/destinations/{destination}', [CommuteController::class, 'updateDestination']);
+Route::delete('/api/commute/destinations/{destination}', [CommuteController::class, 'deleteDestination']);
+Route::get('/api/commute/etas', [CommuteController::class, 'etas']);
+Route::post('/api/commute/refresh', [CommuteController::class, 'refresh']);
+Route::post('/api/commute/geocode', [CommuteController::class, 'geocode']);
 
 Route::get('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'index']);
 Route::post('/api/countdowns', [\App\Http\Controllers\CountdownController::class, 'store']);
