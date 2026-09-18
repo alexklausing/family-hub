@@ -2,6 +2,7 @@
 
 use App\Models\Destination;
 use App\Services\TomTomService;
+use Database\Seeders\CommuteDestinationSeeder;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -309,4 +310,29 @@ test('tomtom service extracts traffic sections', function () {
     expect($result['traffic_sections'])->toHaveCount(1);
     expect($result['traffic_sections'][0]['category'])->toBe('JAM');
     expect($result['traffic_sections'][0]['magnitude'])->toBe(3);
+});
+
+test('commute destination seeder inserts the two default destinations', function () {
+    $this->seed(CommuteDestinationSeeder::class);
+
+    $destinations = Destination::orderBy('sort_order')->get();
+
+    expect($destinations)->toHaveCount(2);
+    expect($destinations[0]->name)->toBe('Lakeland Montessori');
+    expect($destinations[0]->address)->toBe('1124 N. Lake Parker Ave, Lakeland, FL 33805');
+    expect($destinations[0]->lat)->toBe(28.0636);
+    expect($destinations[0]->lon)->toBe(-81.9434);
+    expect($destinations[1]->name)->toBe('Florida Southern College');
+    expect($destinations[1]->address)->toBe('111 Lake Hollingsworth Dr, Lakeland, FL 33801');
+    expect($destinations[1]->lat)->toBe(28.0327);
+    expect($destinations[1]->lon)->toBe(-81.9502);
+});
+
+test('commute destination seeder is idempotent', function () {
+    $this->seed(CommuteDestinationSeeder::class);
+    $this->seed(CommuteDestinationSeeder::class);
+
+    expect(Destination::count())->toBe(2);
+    expect(Destination::pluck('name'))->toContain('Lakeland Montessori');
+    expect(Destination::pluck('name'))->toContain('Florida Southern College');
 });

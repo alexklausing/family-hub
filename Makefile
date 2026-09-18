@@ -19,6 +19,8 @@ buildFresh: down
 	npm install
 	@echo "🌱 Migrating..."
 	$(SAIL_CMD) artisan migrate
+	@echo "🌱 Seeding default data (commute destinations)..."
+	$(SAIL_CMD) artisan db:seed --class=CommuteDestinationSeeder --force
 	@echo "🔗 Linking storage..."
 	$(SAIL_CMD) artisan storage:link --force
 	@echo "✅ Setup Complete! Run 'make vite' to start the frontend."
@@ -151,6 +153,8 @@ deploy:
 	npm run build
 	@echo "🌱 Running database migrations..."
 	$(SAIL_CMD) artisan migrate --force
+	@echo "🌱 Seeding default data (commute destinations)..."
+	$(SAIL_CMD) artisan db:seed --class=CommuteDestinationSeeder --force
 	@echo "🧹 Clearing application cache..."
 	$(SAIL_CMD) artisan cache:clear
 	@echo "🧹 Flushing application caches..."
