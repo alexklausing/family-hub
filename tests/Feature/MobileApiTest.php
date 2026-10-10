@@ -6,6 +6,7 @@ use App\Models\Label;
 use App\Models\MobileDevice;
 use App\Models\Profile;
 use Carbon\Carbon;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 beforeEach(function () {
     config(['services.mobile.pairing_code' => '87676297']);
@@ -51,6 +52,14 @@ test('pairing with the correct code issues a device token', function () {
         ->assertJsonPath('device.name', 'Alex iPhone');
 
     expect(MobileDevice::where('name', 'Alex iPhone')->exists())->toBeTrue();
+});
+
+test('the device model is authenticatable for session-backed auth', function () {
+    $device = pairedDevice();
+
+    expect($device)
+        ->toBeInstanceOf(Authenticatable::class)
+        ->and($device->getAuthIdentifier())->toBe($device->id);
 });
 
 test('mobile routes require a valid token', function () {
