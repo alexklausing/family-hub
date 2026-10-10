@@ -86,4 +86,8 @@ return [
         'key' => env('TOMTOM_API_KEY'),
     ],
 
+    'mobile' => [
+        'pairing_code' => env('MOBILE_PAIRING_CODE'),
+    ],
+
 ];

@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\CalendarManagementController;
 use App\Http\Controllers\Api\CommuteController;
+use App\Http\Controllers\Api\MobileAuthController;
+use App\Http\Controllers\Api\MobileBootstrapController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\WeatherController;
@@ -16,6 +18,10 @@ use Illuminate\Support\Facades\Cache;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/m', function () {
+    return view('mobile');
+})->name('mobile');
 
 Route::get('/api/events', [CalendarController::class, 'index']);
 Route::post('/api/sync/calendars', [CalendarController::class, 'sync']);
@@ -85,6 +91,40 @@ Route::delete('/api/labels/{label}', [LabelController::class, 'destroy']);
 
 Route::get('/api/rewards/bank', [RewardLedgerController::class, 'index']);
 Route::post('/api/rewards/redeem', [RewardLedgerController::class, 'redeem']);
+
+/*
+|--------------------------------------------------------------------------
+| Mobile App API (paired iPhone / PWA)
+|--------------------------------------------------------------------------
+| These routes mirror the kiosk API but require a Sanctum device token so
+| that remote devices cannot mutate data unless they have been paired.
+| The kiosk keeps using the unauthenticated routes above.
+*/
+Route::post('/api/mobile/pair', [MobileAuthController::class, 'pair']);
+
+Route::prefix('api/mobile')->middleware('auth:sanctum')->group(function () {
+    Route::get('/bootstrap', [MobileBootstrapController::class, 'index']);
+    Route::get('/me', [MobileAuthController::class, 'me']);
+    Route::delete('/device', [MobileAuthController::class, 'revoke']);
+
+    Route::get('/chores/approvals', [ChoreController::class, 'approvals']);
+    Route::post('/chores/approvals/{completion}', [ChoreController::class, 'processApproval']);
+    Route::post('/chores/clone-group', [ChoreController::class, 'cloneGroup']);
+
+    Route::get('/chores', [ChoreController::class, 'index']);
+    Route::post('/chores', [ChoreController::class, 'store']);
+    Route::put('/chores/{chore}', [ChoreController::class, 'update']);
+    Route::delete('/chores/{chore}', [ChoreController::class, 'destroy']);
+    Route::post('/chores/{chore}/toggle', [ChoreController::class, 'toggle']);
+
+    Route::get('/labels', [LabelController::class, 'index']);
+    Route::post('/labels', [LabelController::class, 'store']);
+    Route::put('/labels/{label}', [LabelController::class, 'update']);
+    Route::delete('/labels/{label}', [LabelController::class, 'destroy']);
+
+    Route::get('/rewards/bank', [RewardLedgerController::class, 'index']);
+    Route::post('/rewards/redeem', [RewardLedgerController::class, 'redeem']);
+});
 
 Route::get('/api/kiosk/version', function () {
     return response()->json(['version' => Cache::get('kiosk_version', 1)]);

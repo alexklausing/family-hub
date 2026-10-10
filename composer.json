@@ -11,11 +11,12 @@
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.8",
+        "laravel/sail": "^1.62",
+        "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
         "microsoft/microsoft-graph": "^3.2",
         "sabre/dav": "^4.7",
-        "spatie/laravel-google-calendar": "^3.8",
-        "laravel/sail": "^1.62"
+        "spatie/laravel-google-calendar": "^3.8"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^4.3",
