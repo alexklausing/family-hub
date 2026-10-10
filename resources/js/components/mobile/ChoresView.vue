@@ -160,7 +160,7 @@ const emptyMessage = computed(() =>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
                         <h3
-                            class="text-base font-bold leading-tight"
+                            class="min-w-0 flex-1 break-words text-base font-bold leading-tight"
                             :class="{ 'text-slate-500 line-through': chore.completed }"
                         >
                             {{ chore.title }}
@@ -229,7 +229,7 @@ const emptyMessage = computed(() =>
                                 <CheckCircle2 class="h-4 w-4" />
                             </button>
                             <span
-                                class="text-sm"
+                                class="min-w-0 break-words text-sm"
                                 :class="{
                                     'text-slate-500 line-through': subtaskDone(
                                         chore,
