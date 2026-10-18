@@ -23,6 +23,8 @@ Route::get('/m', function () {
     return view('mobile');
 })->name('mobile');
 
+Route::redirect('/app', '/m');
+
 Route::get('/api/events', [CalendarController::class, 'index']);
 Route::post('/api/sync/calendars', [CalendarController::class, 'sync']);
 Route::post('/api/sync/all', [CalendarController::class, 'syncAll']);

@@ -67,6 +67,7 @@ return [
         'tenant' => env('NUTRISLICE_TENANT', 'polk-fl'),
         'school' => env('NUTRISLICE_SCHOOL', 'lakeland-montessori'),
         'school_name' => env('NUTRISLICE_SCHOOL_NAME', 'Lakeland Montessori'),
+        'cache_ttl_seconds' => env('NUTRISLICE_CACHE_TTL_SECONDS', 900),
     ],
 
     'paprika' => [

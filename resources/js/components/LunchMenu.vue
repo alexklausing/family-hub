@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 import { ChevronLeft, ChevronRight, Utensils } from 'lucide-vue-next'
 
@@ -7,8 +7,15 @@ const weekOffset = ref(0)
 const isLoading = ref(true)
 const loadError = ref(false)
 const menu = ref(null)
+const currentTime = ref(new Date())
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+const REFRESH_INTERVAL_MS = 15 * 60 * 1000
+const RESUME_DEBOUNCE_MS = 3000
+
+let refreshInterval = null
+let lastRefreshAt = 0
+let requestSequence = 0
 
 const formatYMD = (date) => {
     const y = date.getFullYear()
@@ -19,7 +26,7 @@ const formatYMD = (date) => {
 
 // Monday of the currently viewed week (shifted by weekOffset)
 const weekStart = computed(() => {
-    const now = new Date()
+    const now = currentTime.value
     const day = now.getDay() // 0 = Sunday
     const diff = day === 0 ? 6 : day - 1
     const monday = new Date(
@@ -38,24 +45,62 @@ const weekLabel = computed(() => {
     return `${weekStart.value.toLocaleDateString([], opts)} – ${end.toLocaleDateString([], opts)}`
 })
 
-const fetchMenu = async () => {
-    isLoading.value = true
+const fetchMenu = async ({ silent = false } = {}) => {
+    const requestId = ++requestSequence
+
+    if (!silent) isLoading.value = true
     loadError.value = false
     try {
         const res = await axios.get('/api/lunch-menu', {
             params: { date: formatYMD(weekStart.value) },
         })
+
+        if (requestId !== requestSequence) return
         menu.value = res.data
     } catch (e) {
+        if (requestId !== requestSequence) return
         console.error('Failed to fetch lunch menu', e)
-        loadError.value = true
+        if (!silent) loadError.value = true
     } finally {
-        isLoading.value = false
+        if (requestId === requestSequence) isLoading.value = false
     }
 }
 
-onMounted(fetchMenu)
-watch(weekOffset, fetchMenu)
+const refreshMenu = () => {
+    currentTime.value = new Date()
+    lastRefreshAt = Date.now()
+    fetchMenu({ silent: menu.value !== null })
+}
+
+const refreshMenuOnResume = () => {
+    if (document.hidden || Date.now() - lastRefreshAt < RESUME_DEBOUNCE_MS) {
+        return
+    }
+
+    refreshMenu()
+}
+
+const handlePageShow = (event) => {
+    if (event.persisted) refreshMenuOnResume()
+}
+
+onMounted(() => {
+    refreshMenu()
+    refreshInterval = window.setInterval(refreshMenu, REFRESH_INTERVAL_MS)
+    document.addEventListener('visibilitychange', refreshMenuOnResume)
+    window.addEventListener('focus', refreshMenuOnResume)
+    window.addEventListener('pageshow', handlePageShow)
+})
+
+onUnmounted(() => {
+    requestSequence++
+    window.clearInterval(refreshInterval)
+    document.removeEventListener('visibilitychange', refreshMenuOnResume)
+    window.removeEventListener('focus', refreshMenuOnResume)
+    window.removeEventListener('pageshow', handlePageShow)
+})
+
+watch(weekOffset, () => fetchMenu())
 
 const daysByDate = computed(() => {
     const map = {}
@@ -65,7 +110,7 @@ const daysByDate = computed(() => {
     return map
 })
 
-const todayStr = formatYMD(new Date())
+const todayStr = computed(() => formatYMD(currentTime.value))
 
 const schoolDays = computed(() => {
     const result = []
@@ -82,7 +127,7 @@ const schoolDays = computed(() => {
                 month: 'short',
                 day: 'numeric',
             }),
-            isToday: dateStr === todayStr,
+            isToday: dateStr === todayStr.value,
             hasSchool: day?.has_school !== false,
             sections: day?.sections || [],
         })

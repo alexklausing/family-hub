@@ -14,8 +14,8 @@ class LunchMenuController extends Controller
      * Return the weekly lunch menu for the configured school.
      *
      * Accepts optional ?date=YYYY-MM-DD to select the week containing that
-     * date (defaults to the current date). The Nutrislice API is cached for
-     * 6 hours to be polite to their servers.
+     * date (defaults to the current date). The Nutrislice response is cached
+     * briefly so kiosk refreshes can pick up menu changes without excess calls.
      */
     public function index(Request $request)
     {
@@ -32,17 +32,21 @@ class LunchMenuController extends Controller
 
         $cacheKey = "lunch_menu_{$tenant}_{$school}_{$date->format('Y-m-d')}";
 
-        $week = Cache::remember($cacheKey, 21600, function () use ($tenant, $school, $date) {
-            $url = "https://{$tenant}.api.nutrislice.com/menu/api/weeks/school/{$school}/menu-type/lunch/{$date->format('Y/m/d')}/";
+        $week = Cache::remember(
+            $cacheKey,
+            (int) config('services.nutrislice.cache_ttl_seconds'),
+            function () use ($tenant, $school, $date) {
+                $url = "https://{$tenant}.api.nutrislice.com/menu/api/weeks/school/{$school}/menu-type/lunch/{$date->format('Y/m/d')}/";
 
-            $response = Http::timeout(15)->get($url);
+                $response = Http::timeout(15)->get($url);
 
-            if ($response->failed() || ! is_array($response->json('days'))) {
-                return null;
+                if ($response->failed() || ! is_array($response->json('days'))) {
+                    return null;
+                }
+
+                return $response->json();
             }
-
-            return $response->json();
-        });
+        );
 
         if ($week === null) {
             return response()->json(['error' => 'Unable to load lunch menu'], 502);

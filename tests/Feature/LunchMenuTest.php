@@ -48,15 +48,23 @@ test('returns the weekly lunch menu for the configured school', function () {
         ->assertJsonPath('days.2.sections', []);
 });
 
-test('caches the menu response for 6 hours', function () {
+test('caches the menu response for the configured duration', function () {
+    config(['services.nutrislice.cache_ttl_seconds' => 900]);
+
     Http::fake([
         'https://polk-fl.api.nutrislice.com/menu/api/weeks/school/lakeland-montessori/menu-type/lunch/2026/08/12/' => Http::response(lunchWeekFixture()),
     ]);
 
     $this->getJson('/api/lunch-menu?date=2026-08-12')->assertStatus(200);
-    $this->getJson('/api/lunch-menu?date=2026-08-12')->assertStatus(200);
 
+    $this->travel(14)->minutes();
+    $this->getJson('/api/lunch-menu?date=2026-08-12')->assertStatus(200);
     Http::assertSentCount(1);
+
+    $this->travel(2)->minutes();
+    $this->getJson('/api/lunch-menu?date=2026-08-12')->assertStatus(200);
+    Http::assertSentCount(2);
+
     expect(Cache::has('lunch_menu_polk-fl_lakeland-montessori_2026-08-12'))->toBeTrue();
 });
 

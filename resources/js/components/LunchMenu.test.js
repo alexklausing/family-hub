@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import LunchMenu from './LunchMenu.vue'
 import axios from 'axios'
 
@@ -46,6 +46,7 @@ describe('LunchMenu', () => {
     let wrapper
 
     beforeEach(() => {
+        wrapper = null
         document.body.innerHTML = ''
         axios.get.mockReset()
         axios.get.mockResolvedValue({ data: sampleWeek })
@@ -53,6 +54,8 @@ describe('LunchMenu', () => {
 
     afterEach(() => {
         if (wrapper) wrapper.unmount()
+        vi.useRealTimers()
+        vi.restoreAllMocks()
     })
 
     it('fetches the lunch menu for the current week on mount', async () => {
@@ -122,5 +125,71 @@ describe('LunchMenu', () => {
         await new Promise((r) => setTimeout(r, 0))
 
         expect(wrapper.text()).toContain("Couldn't load the menu right now.")
+    })
+
+    it('refreshes the menu every 15 minutes', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date(2026, 9, 14, 8))
+
+        wrapper = mount(LunchMenu)
+        await flushPromises()
+        axios.get.mockClear()
+
+        await vi.advanceTimersByTimeAsync(15 * 60 * 1000)
+        await flushPromises()
+
+        expect(axios.get).toHaveBeenCalledOnce()
+        expect(axios.get).toHaveBeenCalledWith('/api/lunch-menu', {
+            params: { date: '2026-10-12' },
+        })
+    })
+
+    it('refreshes the current week after the device wakes', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date(2026, 9, 18, 23, 59))
+        vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
+
+        wrapper = mount(LunchMenu)
+        await flushPromises()
+        axios.get.mockClear()
+
+        vi.setSystemTime(new Date(2026, 9, 19, 0, 1))
+        window.dispatchEvent(new Event('focus'))
+        await flushPromises()
+
+        expect(axios.get).toHaveBeenCalledOnce()
+        expect(axios.get).toHaveBeenCalledWith('/api/lunch-menu', {
+            params: { date: '2026-10-19' },
+        })
+    })
+
+    it('ignores an older response after navigating to another week', async () => {
+        let resolveCurrentWeek
+        let resolveNextWeek
+        axios.get
+            .mockImplementationOnce(
+                () =>
+                    new Promise((resolve) => {
+                        resolveCurrentWeek = resolve
+                    }),
+            )
+            .mockImplementationOnce(
+                () =>
+                    new Promise((resolve) => {
+                        resolveNextWeek = resolve
+                    }),
+            )
+
+        wrapper = mount(LunchMenu)
+        await wrapper.findAll('button')[1].trigger('click')
+
+        resolveNextWeek({ data: { ...sampleWeek, school: 'Next Week' } })
+        await flushPromises()
+        expect(wrapper.text()).toContain('Next Week')
+
+        resolveCurrentWeek({ data: { ...sampleWeek, school: 'Current Week' } })
+        await flushPromises()
+        expect(wrapper.text()).toContain('Next Week')
+        expect(wrapper.text()).not.toContain('Current Week')
     })
 })

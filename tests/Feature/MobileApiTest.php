@@ -21,6 +21,10 @@ function pairedDevice(): MobileDevice
     ]);
 }
 
+test('the legacy mobile app URL redirects to the current app', function () {
+    $this->get('/app')->assertRedirect('/m');
+});
+
 test('pairing is rejected when the hub has no pairing code configured', function () {
     config(['services.mobile.pairing_code' => '']);
 
