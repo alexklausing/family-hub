@@ -139,4 +139,41 @@ describe('useDashboard', () => {
 
         expect(api.workspaces.value.map((w) => w.id)).toEqual(['ws_family'])
     })
+
+    it('enables a newly seeded calendar only for profiles where it is a backend default', async () => {
+        localStorage.setItem('dashboard_calendar_order', JSON.stringify([1, 2]))
+        localStorage.setItem(
+            'dashboard_filters_map',
+            JSON.stringify({ Family: [1], Alex: [2] }),
+        )
+        axios.get.mockResolvedValue({
+            data: {
+                events: [],
+                calendars: [
+                    { id: 1, name: 'Family' },
+                    { id: 2, name: 'Work' },
+                    {
+                        id: 3,
+                        name: 'Paprika Menu Plan',
+                        external_id: 'paprika_menu_plan',
+                    },
+                ],
+                default_calendar_id: null,
+                profiles: [
+                    { name: 'Family', visible_calendars: [1, 3] },
+                    { name: 'Alex', visible_calendars: [2] },
+                ],
+            },
+        })
+
+        await mountApi()
+
+        expect(api.filtersByProfile.value).toEqual({
+            Family: [1, 3],
+            Alex: [2],
+        })
+        expect(
+            JSON.parse(localStorage.getItem('dashboard_calendar_order')),
+        ).toEqual([1, 2, 3])
+    })
 })

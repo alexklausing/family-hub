@@ -258,6 +258,38 @@ export function useDashboard() {
         return [...merged.values()]
     }
 
+    const reconcileProfileCalendarVisibility = (
+        dbProfiles,
+        newCalendarIds,
+    ) => {
+        let activeProfileWasNull = false
+
+        for (const profile of dbProfiles || []) {
+            if (profile.visible_calendars === null) {
+                if (profile.name === activeProfile.value) {
+                    activeProfileWasNull = true
+                }
+                continue
+            }
+
+            const localIds = filtersByProfile.value[profile.name]
+            const backendIds = profile.visible_calendars.map(Number)
+            if (localIds === undefined) {
+                filtersByProfile.value[profile.name] = backendIds
+                continue
+            }
+
+            const newDefaultIds = backendIds.filter((id) =>
+                newCalendarIds.includes(id),
+            )
+            filtersByProfile.value[profile.name] = [
+                ...new Set([...localIds.map(Number), ...newDefaultIds]),
+            ]
+        }
+
+        return activeProfileWasNull
+    }
+
     const fetchEvents = async (start = null, end = null) => {
         const seq = ++fetchSequence
         isLoading.value = true
@@ -279,7 +311,16 @@ export function useDashboard() {
                     : mergeEvents(allEvents.value, response.data.events)
 
             let fetchedCalendars = response.data.calendars
-            if (calendarOrder.value.length > 0) {
+            const hadSavedCalendarOrder = calendarOrder.value.length > 0
+            const previouslyKnownCalendarIds = new Set(
+                calendarOrder.value.map(Number),
+            )
+            const fetchedIds = fetchedCalendars.map((c) => Number(c.id))
+            const newCalendarIds = hadSavedCalendarOrder
+                ? fetchedIds.filter((id) => !previouslyKnownCalendarIds.has(id))
+                : []
+
+            if (hadSavedCalendarOrder) {
                 fetchedCalendars.sort((a, b) => {
                     const idxA = calendarOrder.value.indexOf(a.id)
                     const idxB = calendarOrder.value.indexOf(b.id)
@@ -288,36 +329,24 @@ export function useDashboard() {
                     if (idxB === -1) return -1
                     return idxA - idxB
                 })
+                calendarOrder.value.push(...newCalendarIds)
             } else {
-                calendarOrder.value = fetchedCalendars.map((c) => c.id)
+                calendarOrder.value = fetchedIds
                 saveFilters()
             }
             availableCalendars.value = fetchedCalendars
 
             defaultCalendarId.value = response.data.default_calendar_id || null
 
-            const dbProfiles = response.data.profiles
-            let profileWasNull = false
-            if (dbProfiles) {
-                dbProfiles.forEach((p) => {
-                    if (p.visible_calendars !== null) {
-                        const local = filtersByProfile.value[p.name]
-                        // Seed a profile's visibility from the backend only the
-                        // first time we see it locally. Afterwards local wins,
-                        // so a slow response can't clobber a user's toggle.
-                        if (local === undefined) {
-                            filtersByProfile.value[p.name] =
-                                p.visible_calendars.map(Number)
-                        }
-                    } else if (p.name === activeProfile.value) {
-                        profileWasNull = true
-                    }
-                })
-            }
+            // Preserve local toggles while adopting backend defaults for
+            // calendars this browser has not seen before.
+            const profileWasNull = reconcileProfileCalendarVisibility(
+                response.data.profiles,
+                newCalendarIds,
+            )
 
             // Automatically enable newly added calendars
             const knownIds = filtersByProfile.value[activeProfile.value] || []
-            const fetchedIds = availableCalendars.value.map((c) => Number(c.id))
 
             if (profileWasNull && knownIds.length === 0) {
                 // First time ever loading this profile, enable all
@@ -335,7 +364,7 @@ export function useDashboard() {
                 scheduleEvents.value = response.data.events
             } else if (
                 scheduleEvents.value.length === 0 ||
-                fetchedIds.filter((id) => !knownIds.includes(id)).length > 0
+                newCalendarIds.length > 0
             ) {
                 // Fetch schedule events separately if we just added a calendar
                 axios

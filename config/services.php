@@ -73,6 +73,7 @@ return [
     'paprika' => [
         'email' => env('PAPRIKA_EMAIL'),
         'password' => env('PAPRIKA_PASSWORD'),
+        'menu_plan_calendar_url' => env('PAPRIKA_MENU_PLAN_ICS_URL'),
     ],
 
     'marvin' => [

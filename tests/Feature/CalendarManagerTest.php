@@ -66,3 +66,34 @@ test('it does not sync if last_synced_at is recent', function () {
 
     expect($events)->toHaveCount(0);
 });
+
+test('it syncs an iCal calendar from its configured feed URL', function () {
+    $profile = Profile::create(['name' => 'Family']);
+    $tab = Tab::create(['name' => 'Calendar', 'profile_id' => $profile->id]);
+    $calendar = Calendar::create([
+        'tab_id' => $tab->id,
+        'provider' => 'ical',
+        'external_id' => 'paprika_menu_plan',
+        'credentials' => ['url' => 'https://example.com/paprika.ics'],
+        'refresh_rate' => 15,
+    ]);
+
+    $this->ical
+        ->shouldReceive('getEvents')
+        ->once()
+        ->with('https://example.com/paprika.ics')
+        ->andReturn([
+            [
+                'id' => 'paprika-event-1',
+                'title' => 'Family Dinner',
+                'start' => '2026-10-19',
+                'end' => '2026-10-20',
+                'all_day' => true,
+            ],
+        ]);
+
+    $this->manager->syncCalendar($calendar);
+
+    expect($calendar->events()->sole()->title)->toBe('Family Dinner')
+        ->and($calendar->fresh()->last_synced_at)->not->toBeNull();
+});

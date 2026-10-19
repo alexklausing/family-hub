@@ -35,6 +35,8 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        $this->call(PaprikaMenuPlanCalendarSeeder::class);
+
         // Seed Chores
         $this->call(ChoreSeeder::class);
 
@@ -82,7 +84,7 @@ class DatabaseSeeder extends Seeder
         // Define which calendars each profile should see by default
         // The names here should match the 'name' column of the seeded calendars
         $visibilityMatrix = [
-            'Family' => ['Scouting', 'Montessori', 'Work', 'A&S Family Calendar'],
+            'Family' => ['Scouting', 'Montessori', 'Work', 'A&S Family Calendar', 'Paprika Menu Plan'],
             'Alex' => ['Work', 'A&S Family Calendar'],
             'Sarah' => ['A&S Family Calendar'],
             'Emily' => ['Montessori'],
